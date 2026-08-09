@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "name": "qwenvoice",
+  "github": "https://github.com/SuperMarioYL/qwenvoice",
+  "host": "qwenvoice.lei6393.com",
+  "lang": { "primary": "zh", "toggle": true },
+  "accent": ["#e6a144"],
+  "hero": {
+    "eyebrow": {
+      "zh": "本地离线 · 音色不上云 · 一条命令",
+      "en": "Local & offline · Voice on device · One command"
+    },
+    "headline": {
+      "zh": "用你自己的音色朗读中文",
+      "en": "Read Chinese in your own voice"
+    },
+    "sub": {
+      "zh": "一段 5 秒的参考音频就能锁定家人音色，全程本地离线合成，音色生物特征从不上云。",
+      "en": "Lock a family voice from a 5-second sample and synthesize entirely offline — your voice biometric never leaves the machine."
+    },
+    "command": "qwenvoice say --voice ref.wav --ref-text '今天天气真好' --text '你好' -o hello.mp3"
+  },
+  "advantages": [
+    {
+      "title": { "zh": "音色不上云", "en": "Your voice stays on your device" },
+      "body": {
+        "zh": "云端语音合成要你上传家人的音色样本——那是生物特征。QwenVoice 全程本地离线，参考音频从不离开你的机器。",
+        "en": "Cloud voice synthesis asks you to upload your family's voice sample — that's a biometric. QwenVoice runs entirely offline; your reference audio never leaves your machine."
+      },
+      "chips": ["› 本地离线合成", "› 无需账号联网"]
+    },
+    {
+      "title": { "zh": "5 秒锁定家人音色", "en": "Clone a voice from 5 seconds" },
+      "body": {
+        "zh": "录一段家人说话的参考音频并记下那句转写，音色即被锁定。随后任意一段中文都能用这个音色读出来。",
+        "en": "Record a family member speaking and note the transcript — the voice is locked. Any passage of Chinese can then be read in that voice."
+      },
+      "chips": ["› 5 秒参考音频", "› 自动指纹锁定"]
+    },
+    {
+      "title": { "zh": "消费级硬件就能跑", "en": "Runs on the laptop you own" },
+      "body": {
+        "zh": "不需要昂贵的显卡，模型在普通笔记本上本地运行，一条命令安装即用。",
+        "en": "No expensive GPU needed — the model runs locally on an ordinary laptop, ready with a single install command."
+      },
+      "chips": ["› 无需独立显卡", "› 一条命令安装"]
+    },
+    {
+      "title": { "zh": "锁定即复现", "en": "Locked voice, reproducible" },
+      "body": {
+        "zh": "不用担心每次合成音色都变——QwenVoice 为每次合成生成专属音色指纹，同样的输入永远读出同一个音色。",
+        "en": "No more voice shifting between renders — QwenVoice generates a dedicated voice fingerprint for every synthesis, so the same input always yields the same voice."
+      },
+      "chips": ["› 音色指纹锁定", "› 同输入同音色"]
+    }
+  ],
+  "scene": { "kind": "particle-field" },
+  "cta": {
+    "headline": {
+      "zh": "用家人的声音 读出你的文字",
+      "en": "Hear your text in your family's voice"
+    },
+    "sub": {
+      "zh": "一条命令安装，5 秒参考音频，本地离线合成你的第一段克隆音色。",
+      "en": "One command to install, a 5-second sample, then synthesize your first cloned-voice segment offline."
+    },
+    "button": { "zh": "开始使用", "en": "Get started" }
+  },
+  "footer": {
+    "tag": {
+      "zh": "本地离线中文音色克隆 · 音色不上云",
+      "en": "Local offline Chinese voice cloning · Voice stays on device"
+    }
+  }
+}
