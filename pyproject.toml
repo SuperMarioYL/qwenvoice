@@ -1,0 +1,58 @@
+[project]
+name = "qwenvoice"
+version = "0.1.0"
+description = "Local offline Chinese voice cloning + long-text narration via Qwen3-TTS (qwentts.cpp FFI)."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "SuperMarioYL" }]
+keywords = ["tts", "qwen3-tts", "voice-cloning", "chinese", "offline", "gguf", "audiobook"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Multimedia :: Sound/Audio :: Conversion",
+    "Intended Audience :: End Users/Desktop",
+]
+dependencies = [
+    "typer>=0.12.0",
+    "pydantic>=2.7.0",
+    "pydub>=0.25.1",
+    "jieba>=0.42.1",
+    "rich>=13.7.0",
+    "pyyaml>=6.0.1",
+    "cffi>=1.16.0",
+]
+
+[project.scripts]
+qwenvoice = "qwenvoice.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/SuperMarioYL/qwenvoice"
+Issues = "https://github.com/SuperMarioYL/qwenvoice/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["qwenvoice"]
+
+[tool.hatch.build.targets.sdist]
+include = ["qwenvoice", "tests", "scripts", "docs", "assets", "README.md", "README.en.md", "LICENSE", "VERSION"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008: typer.Option/Path in argument defaults is the canonical typer CLI idiom.
+ignore = ["E501", "B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

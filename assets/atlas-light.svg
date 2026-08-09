@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 360" width="880" height="360"
+     font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
+     role="img" aria-label="QwenVoice architecture: Text+Ref Audio → Segment+VoiceLock → cffi FFI qt3_tts → Seg MP3 + manifest">
+  <defs>
+    <marker id="ah-l" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#B9B9C2"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="880" height="360" fill="#F5F5F7"/>
+  <title>QwenVoice architecture</title>
+
+  <!-- static connector lines (with arrowheads) -->
+  <g stroke="#C9C9D0" stroke-width="1.5" fill="none">
+    <line x1="180" y1="180" x2="240" y2="180" marker-end="url(#ah-l)"/>
+    <line x1="390" y1="180" x2="450" y2="180" marker-end="url(#ah-l)"/>
+    <line x1="600" y1="180" x2="660" y2="180" marker-end="url(#ah-l)"/>
+  </g>
+
+  <!-- marching dashed data-flow lines (infinite, data direction →), staggered -->
+  <g stroke-width="1.5" fill="none" stroke-linecap="round">
+    <line x1="180" y1="180" x2="236" y2="180" stroke="#5E5CE6" stroke-opacity="0.5" stroke-dasharray="6 10">
+      <animate attributeName="stroke-dashoffset" from="32" to="0" dur="1.6s" repeatCount="indefinite"/>
+    </line>
+    <line x1="390" y1="180" x2="446" y2="180" stroke="#0071E3" stroke-opacity="0.5" stroke-dasharray="6 10">
+      <animate attributeName="stroke-dashoffset" from="32" to="0" dur="1.6s" begin="-0.55s" repeatCount="indefinite"/>
+    </line>
+    <line x1="600" y1="180" x2="656" y2="180" stroke="#10A37F" stroke-opacity="0.5" stroke-dasharray="6 10">
+      <animate attributeName="stroke-dashoffset" from="32" to="0" dur="1.6s" begin="-1.1s" repeatCount="indefinite"/>
+    </line>
+  </g>
+
+  <!-- data packets travelling along each connector -->
+  <g>
+    <circle r="3" fill="#5E5CE6">
+      <animateMotion path="M180,180 L236,180" dur="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.15;0.85;1" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="3" fill="#0071E3">
+      <animateMotion path="M390,180 L446,180" dur="2.4s" begin="-0.8s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.15;0.85;1" dur="2.4s" begin="-0.8s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="3" fill="#10A37F">
+      <animateMotion path="M600,180 L656,180" dur="2.4s" begin="-1.6s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.15;0.85;1" dur="2.4s" begin="-1.6s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- nodes: breathing fill-opacity 0.10↔0.18, 4 nodes staggered -->
+  <g>
+    <!-- N1 INPUT: Text + Ref Audio (purple, agent/logic) -->
+    <rect x="30" y="140" width="150" height="80" rx="15" fill="#5E5CE6" fill-opacity="0.10" stroke="#5E5CE6" stroke-width="1.5">
+      <animate attributeName="fill-opacity" values="0.10;0.18;0.10" keyTimes="0;0.5;1" dur="3.2s"
+               calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1" repeatCount="indefinite"/>
+    </rect>
+    <text x="105" y="178" text-anchor="middle" font-size="13" font-weight="600" fill="#4B3FC4">Text + Ref Audio</text>
+    <text x="105" y="196" text-anchor="middle" font-size="10" fill="#6E6E73">中文长文 · mom.wav + ref_text</text>
+
+    <!-- N2: Segment + VoiceLock (blue, infra) -->
+    <rect x="240" y="140" width="150" height="80" rx="15" fill="#0071E3" fill-opacity="0.10" stroke="#0071E3" stroke-width="1.5">
+      <animate attributeName="fill-opacity" values="0.10;0.18;0.10" keyTimes="0;0.5;1" dur="3.2s" begin="-0.8s"
+               calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1" repeatCount="indefinite"/>
+    </rect>
+    <text x="315" y="178" text-anchor="middle" font-size="13" font-weight="600" fill="#0A4F9E">Segment + VoiceLock</text>
+    <text x="315" y="196" text-anchor="middle" font-size="10" fill="#6E6E73">segment.py · voice.py</text>
+
+    <!-- N3: cffi FFI qt3_tts (green, inference) -->
+    <rect x="450" y="140" width="150" height="80" rx="15" fill="#10A37F" fill-opacity="0.10" stroke="#10A37F" stroke-width="1.5">
+      <animate attributeName="fill-opacity" values="0.10;0.18;0.10" keyTimes="0;0.5;1" dur="3.2s" begin="-1.6s"
+               calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1" repeatCount="indefinite"/>
+    </rect>
+    <text x="525" y="178" text-anchor="middle" font-size="13" font-weight="600" fill="#0B6B53">cffi FFI qt3_tts</text>
+    <text x="525" y="196" text-anchor="middle" font-size="10" fill="#6E6E73">synth.py · libgoqwen3ttscpp</text>
+
+    <!-- N4 OUTPUT: Seg MP3 + manifest (purple, agent/logic) -->
+    <rect x="660" y="140" width="150" height="80" rx="15" fill="#5E5CE6" fill-opacity="0.10" stroke="#5E5CE6" stroke-width="1.5">
+      <animate attributeName="fill-opacity" values="0.10;0.18;0.10" keyTimes="0;0.5;1" dur="3.2s" begin="-2.4s"
+               calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1" repeatCount="indefinite"/>
+    </rect>
+    <text x="735" y="178" text-anchor="middle" font-size="13" font-weight="600" fill="#4B3FC4">Seg MP3 + manifest</text>
+    <text x="735" y="196" text-anchor="middle" font-size="10" fill="#6E6E73">render.py · manifest.py</text>
+  </g>
+
+  <!-- flow caption -->
+  <text x="440" y="290" text-anchor="middle" font-size="12" fill="#6E6E73">
+    VoiceLock + per-segment seed → redraw one segment, others byte-identical
+  </text>
+</svg>

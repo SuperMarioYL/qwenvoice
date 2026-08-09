@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# uv / venv
+.venv/
+venv/
+.env
+
+# model weights + reference audio (local-only, never ship)
+models/*.gguf
+*.wav
+*.mp3
+!assets/*.mp3
+book/
+output/
+
+# editor / OS
+.idea/
+.vscode/
+.DS_Store
+
+# build scratch
+PUBLISH_BLOCKED.md
+BUILD_SETUP_NEXT_STEPS.md
+.spawn.*
+.builder_*
+.build_metadata*
+.stage_*
+.claude/
+CLAUDE.md
