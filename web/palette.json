@@ -1,0 +1,38 @@
+{
+  "mode": "auto",
+  "id": "75e656-6ae791-d7f6ac-067cf75a387a",
+  "identity": "https://github.com/supermarioyl/qwenvoice",
+  "primary": "#75e656",
+  "secondary": "#6ae791",
+  "highlight": "#d7f6ac",
+  "dark": {
+    "bg": "#060c0d",
+    "panel": "#0d1717",
+    "code": "#0c1713",
+    "ink": "#f7fdee",
+    "muted": "#9bb9a8",
+    "line": "#1e3c1d",
+    "primary": "#75e656",
+    "secondary": "#6ae791",
+    "highlight": "#d7f6ac",
+    "accent": "#75e656",
+    "buttonStart": "#448532",
+    "buttonEnd": "#3d8453",
+    "buttonText": "#ffffff"
+  },
+  "light": {
+    "bg": "#fafef9",
+    "panel": "#f8fef7",
+    "code": "#f5fdf3",
+    "ink": "#172a1c",
+    "muted": "#5b7b6b",
+    "line": "#d5f7cb",
+    "primary": "#428231",
+    "secondary": "#3b8151",
+    "highlight": "#6a7955",
+    "accent": "#428231",
+    "buttonStart": "#448532",
+    "buttonEnd": "#3d8453",
+    "buttonText": "#ffffff"
+  }
+}

@@ -1,7 +1,7 @@
 [project]
 name = "qwenvoice"
 version = "0.1.0"
-description = "Local offline Chinese voice cloning + long-text narration via Qwen3-TTS (qwentts.cpp FFI)."
+description = "Chinese text segmentation and a single-segment speech pipeline using local Qwen3-TTS artifacts through FFI or a configured speech endpoint."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }

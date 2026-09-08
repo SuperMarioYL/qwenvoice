@@ -1,75 +1,215 @@
 {
-  "schema": 1,
-  "name": "qwenvoice",
+  "schema": 3,
+  "name": "QwenVoice",
   "github": "https://github.com/SuperMarioYL/qwenvoice",
   "host": "qwenvoice.lei6393.com",
-  "lang": { "primary": "zh", "toggle": true },
-  "accent": ["#e6a144"],
+  "palette": "auto",
+  "lang": {
+    "primary": "en",
+    "toggle": true
+  },
+  "meta": {
+    "visual_style": "neon-particle",
+    "demo_source": "docs/demo-results.json"
+  },
   "hero": {
-    "eyebrow": {
-      "zh": "本地离线 · 音色不上云 · 一条命令",
-      "en": "Local & offline · Voice on device · One command"
-    },
     "headline": {
-      "zh": "用你自己的音色朗读中文",
-      "en": "Read Chinese in your own voice"
+      "en": "Prepare Chinese narration one segment at a time",
+      "zh": "逐段准备中文配音"
     },
     "sub": {
-      "zh": "一段 5 秒的参考音频就能锁定家人音色，全程本地离线合成，音色生物特征从不上云。",
-      "en": "Lock a family voice from a 5-second sample and synthesize entirely offline — your voice biometric never leaves the machine."
+      "en": "QwenVoice combines a reference-audio record, Chinese sentence segmentation and a single-segment speech command. Its say path uses configured Qwen3-TTS artifacts; long-book and redraw commands are not yet implemented.",
+      "zh": "QwenVoice 将参考音频记录、中文句子切分和单段语音命令连接起来。say 路径使用配置的 Qwen3-TTS 产物；长篇 book 与 redraw 命令尚未实现。"
     },
-    "command": "qwenvoice say --voice ref.wav --ref-text '今天天气真好' --text '你好' -o hello.mp3"
+    "href": "#quickstart"
   },
   "advantages": [
     {
-      "title": { "zh": "音色不上云", "en": "Your voice stays on your device" },
-      "body": {
-        "zh": "云端语音合成要你上传家人的音色样本——那是生物特征。QwenVoice 全程本地离线，参考音频从不离开你的机器。",
-        "en": "Cloud voice synthesis asks you to upload your family's voice sample — that's a biometric. QwenVoice runs entirely offline; your reference audio never leaves your machine."
+      "title": {
+        "en": "Inspect segment boundaries",
+        "zh": "检查分段边界"
       },
-      "chips": ["› 本地离线合成", "› 无需账号联网"]
+      "body": {
+        "en": "The segmenter accumulates whole sentences under a soft character limit.",
+        "zh": "切分器按软字符上限聚合完整句子。"
+      }
     },
     {
-      "title": { "zh": "5 秒锁定家人音色", "en": "Clone a voice from 5 seconds" },
-      "body": {
-        "zh": "录一段家人说话的参考音频并记下那句转写，音色即被锁定。随后任意一段中文都能用这个音色读出来。",
-        "en": "Record a family member speaking and note the transcript — the voice is locked. Any passage of Chinese can then be read in that voice."
+      "title": {
+        "en": "Record reference identity",
+        "zh": "记录参考音频标识"
       },
-      "chips": ["› 5 秒参考音频", "› 自动指纹锁定"]
+      "body": {
+        "en": "VoiceLock hashes reference bytes plus transcript and records model paths.",
+        "zh": "VoiceLock 对参考字节与转录文本计算哈希，并记录模型路径。"
+      }
     },
     {
-      "title": { "zh": "消费级硬件就能跑", "en": "Runs on the laptop you own" },
-      "body": {
-        "zh": "不需要昂贵的显卡，模型在普通笔记本上本地运行，一条命令安装即用。",
-        "en": "No expensive GPU needed — the model runs locally on an ordinary laptop, ready with a single install command."
+      "title": {
+        "en": "Separate audio stages",
+        "zh": "分开处理音频阶段"
       },
-      "chips": ["› 无需独立显卡", "› 一条命令安装"]
-    },
-    {
-      "title": { "zh": "锁定即复现", "en": "Locked voice, reproducible" },
       "body": {
-        "zh": "不用担心每次合成音色都变——QwenVoice 为每次合成生成专属音色指纹，同样的输入永远读出同一个音色。",
-        "en": "No more voice shifting between renders — QwenVoice generates a dedicated voice fingerprint for every synthesis, so the same input always yields the same voice."
-      },
-      "chips": ["› 音色指纹锁定", "› 同输入同音色"]
+        "en": "Synthesis returns PCM; rendering converts audio and writes the output file.",
+        "zh": "合成返回 PCM，渲染阶段转换音频并写入文件。"
+      }
     }
   ],
-  "scene": { "kind": "particle-field" },
-  "cta": {
-    "headline": {
-      "zh": "用家人的声音 读出你的文字",
-      "en": "Hear your text in your family's voice"
+  "demo": {
+    "title": {
+      "en": "Run it on a complete example",
+      "zh": "运行完整示例"
     },
-    "sub": {
-      "zh": "一条命令安装，5 秒参考音频，本地离线合成你的第一段克隆音色。",
-      "en": "One command to install, a 5-second sample, then synthesize your first cloned-voice segment offline."
+    "note": {
+      "en": "The complete offline example runs segment_long_text on supplied Chinese text and checks that concatenating these segments reconstructs the input. It generates no audio.",
+      "zh": "完整离线示例对给定中文文本运行 segment_long_text，并核对该样本的分段拼接可还原输入。不会生成音频。"
     },
-    "button": { "zh": "开始使用", "en": "Get started" }
+    "source": "https://github.com/SuperMarioYL/qwenvoice/blob/main/docs/demo-results.json",
+    "steps": [
+      {
+        "label": "Recorded run",
+        "body": "Actual sentence-boundary segmentation of complete Chinese text, no audio generation or model artifacts.",
+        "command": ".venv/bin/python examples/presentation_demo.py",
+        "output": "{\n  \"input\": \"缓存保存可复用的结果。数据变化后需要失效。接下来，为每类数据选择有效期。\",\n  \"soft_limit\": 18,\n  \"segments\": [\n    {\n      \"id\": 1,\n      \"text\": \"缓存保存可复用的结果。\"\n    },\n    {\n      \"id\": 2,\n      \"text\": \"数据变化后需要失效。\"\n    },\n    {\n      \"id\": 3,\n      \"text\": \"接下来，为每类数据选择有效期。\"\n    }\n  ]\n}\nInput preserved: True\nScope: sentence-boundary text segmentation only; no voice cloning or audio synthesis.",
+        "image": "/assets/presentation/demo-0-light.svg",
+        "imageDark": "/assets/presentation/demo-0-dark.svg"
+      }
+    ]
   },
-  "footer": {
-    "tag": {
-      "zh": "本地离线中文音色克隆 · 音色不上云",
-      "en": "Local offline Chinese voice cloning · Voice stays on device"
+  "quickstart": {
+    "title": {
+      "en": "Try it locally",
+      "zh": "本地上手"
+    },
+    "body": {
+      "en": "The complete offline example runs segment_long_text on supplied Chinese text and checks that concatenating these segments reconstructs the input. It generates no audio.",
+      "zh": "完整离线示例对给定中文文本运行 segment_long_text，并核对该样本的分段拼接可还原输入。不会生成音频。"
+    },
+    "steps": [
+      {
+        "title": {
+          "en": "Install from source",
+          "zh": "从源码安装"
+        },
+        "code": "git clone https://github.com/SuperMarioYL/qwenvoice.git\ncd qwenvoice\nuv venv --python 3.12\nsource .venv/bin/activate\nuv pip install -e ."
+      },
+      {
+        "title": {
+          "en": "Run the included example",
+          "zh": "运行随仓示例"
+        },
+        "code": ".venv/bin/python examples/presentation_demo.py"
+      }
+    ]
+  },
+  "limitations": [
+    {
+      "en": "book and redraw are placeholders that return exit 64. No complete long-book narration or selective redraw workflow is implemented.",
+      "zh": "book 和 redraw 是返回 64 的占位入口，完整长篇配音与局部重绘流程尚未实现。"
+    },
+    {
+      "en": "The soft limit may be exceeded by a single long sentence. The segmenter is punctuation-based; it does not use jieba word boundaries in its current implementation.",
+      "zh": "单个长句可能超过软上限。当前切分器基于标点，并未使用 jieba 词边界。"
+    },
+    {
+      "en": "This demo validates text segmentation only. Native ABI compatibility, voice quality and audio output were not tested.",
+      "zh": "本示例仅验证文本切分，未测试原生 ABI 兼容性、音色质量或音频输出。"
     }
+  ],
+  "scene": {
+    "kind": "neon-graph",
+    "fallback": "/assets/presentation/scene-dark.svg",
+    "fallbackLight": "/assets/presentation/scene-light.svg"
+  },
+  "story": {
+    "intro": {
+      "title": {
+        "en": "A concrete task",
+        "zh": "从实际任务出发"
+      },
+      "body": {
+        "en": "A narration workflow needs to know which text segment, reference recording and model files produced an output. QwenVoice keeps these inputs explicit, while its local segmenter lets you inspect Chinese sentence boundaries before attempting synthesis.",
+        "zh": "配音流程需要明确每个输出对应的文本片段、参考录音和模型文件。QwenVoice 显式记录这些输入，本地切分器则让你在尝试合成前先检查中文句子边界。"
+      }
+    },
+    "sections": [
+      {
+        "title": {
+          "en": "Follow the operation",
+          "zh": "处理过程"
+        },
+        "body": {
+          "en": "segment.py provides single- and long-text segmentation helpers. VoiceLock validates reference/model paths and fingerprints the reference content. synth_segment tries the qt3_* FFI interface, then a configured HTTP speech endpoint when the FFI is unavailable. render.py handles the returned PCM and MP3 output.",
+          "zh": "segment.py 提供单段与长文切分函数。VoiceLock 检查参考音频和模型路径，并为参考内容生成指纹。synth_segment 尝试 qt3_* FFI 接口，FFI 不可用时使用配置的 HTTP 语音端点。render.py 处理返回 PCM 和 MP3 输出。"
+        },
+        "image": {
+          "light": "/assets/presentation/process-light.svg",
+          "dark": "/assets/presentation/process-dark.svg",
+          "alt": {
+            "en": "Follow the operation",
+            "zh": "处理过程"
+          }
+        }
+      },
+      {
+        "title": {
+          "en": "Text and reference inputs meet at synthesis",
+          "zh": "文本与参考输入进入合成"
+        },
+        "body": {
+          "en": "segment.py provides single- and long-text segmentation helpers. VoiceLock validates reference/model paths and fingerprints the reference content. synth_segment tries the qt3_* FFI interface, then a configured HTTP speech endpoint when the FFI is unavailable. render.py handles the returned PCM and MP3 output.",
+          "zh": "segment.py 提供单段与长文切分函数。VoiceLock 检查参考音频和模型路径，并为参考内容生成指纹。synth_segment 尝试 qt3_* FFI 接口，FFI 不可用时使用配置的 HTTP 语音端点。render.py 处理返回 PCM 和 MP3 输出。"
+        },
+        "image": {
+          "light": "/assets/presentation/architecture-light.svg",
+          "dark": "/assets/presentation/architecture-dark.svg",
+          "alt": {
+            "en": "Text and reference inputs meet at synthesis",
+            "zh": "文本与参考输入进入合成"
+          }
+        }
+      },
+      {
+        "title": {
+          "en": "Connect the pieces",
+          "zh": "输入与输出"
+        },
+        "body": {
+          "en": "The Python package does not include model weights or the FFI library. Its reference hash identifies input changes, not a guarantee of speaker similarity or deterministic audio. A speech endpoint must understand the request’s reference-path and transcript fields.",
+          "zh": "Python 包不包含模型权重或 FFI 库。参考哈希用于识别输入变化，不能保证音色相似度或音频确定性。语音端点需理解请求中的参考路径和转录字段。"
+        },
+        "image": {
+          "light": "/assets/presentation/integrations-light.svg",
+          "dark": "/assets/presentation/integrations-dark.svg",
+          "alt": {
+            "en": "Connect the pieces",
+            "zh": "输入与输出"
+          }
+        }
+      }
+    ],
+    "details": [
+      {
+        "title": {
+          "en": "Configuration",
+          "zh": "配置"
+        },
+        "body": {
+          "en": "The YAML config holds talker_gguf, codec_gguf, ffi_lib_path, http_fallback_url, sample_rate, channels, seed and max_chars_per_segment. Configure the HTTP base with init --http-fallback http://127.0.0.1:8000; say has no --http-fallback option. The implementation appends /v1/audio/speech. It does not enforce loopback URLs, so keeping the endpoint local is an operator configuration choice.",
+          "zh": "YAML 配置包含 talker_gguf、codec_gguf、ffi_lib_path、http_fallback_url、sample_rate、channels、seed 和 max_chars_per_segment。HTTP 基础地址通过 init --http-fallback http://127.0.0.1:8000 配置；say 没有 --http-fallback 参数。实现会追加 /v1/audio/speech，且不强制回环 URL，因此端点是否本地由操作员配置决定。"
+        }
+      },
+      {
+        "title": {
+          "en": "Further use",
+          "zh": "进一步使用"
+        },
+        "body": {
+          "en": "Replace artifact and recording paths with real compatible files before running the audio commands. init reports availability and writes ~/.qwenvoice/config.yml; it can write configuration even when artifacts are missing. say locks inputs and synthesizes one segment. Use a voice sample you are authorized to synthesize from.",
+          "zh": "运行音频命令前，应将产物和录音路径替换为真实兼容文件。init 报告可用性并写入 ~/.qwenvoice/config.yml；即使产物缺失也可能写配置。say 锁定输入并合成单段。请使用有权用于合成的参考音频。"
+        },
+        "code": ".venv/bin/qwenvoice init --talker ./models/talker.gguf --codec ./models/codec.gguf --ffi-lib ./libgoqwen3ttscpp.dylib\n.venv/bin/qwenvoice say --voice ./reference.wav --ref-text \"参考录音的准确转录\" --text \"你好，欢迎收听。\" --out ./hello.mp3"
+      }
+    ]
   }
 }

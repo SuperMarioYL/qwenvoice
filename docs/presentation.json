@@ -1,0 +1,82 @@
+{
+  "name": "QwenVoice",
+  "tagline": "Prepare Chinese narration one segment at a time",
+  "architecture": {
+    "title": "Text and reference inputs meet at synthesis",
+    "nodes": [
+      {
+        "title": "Chinese text",
+        "detail": "sentence-boundary segments"
+      },
+      {
+        "title": "VoiceLock",
+        "detail": "reference and artifact paths"
+      },
+      {
+        "title": "Synth adapter",
+        "detail": "FFI or HTTP speech"
+      },
+      {
+        "title": "Audio renderer",
+        "detail": "PCM to MP3"
+      }
+    ],
+    "edges": [
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        3
+      ]
+    ]
+  },
+  "process": {
+    "title": "From input to a useful result",
+    "steps": [
+      {
+        "title": "Read text",
+        "detail": "three complete sentences"
+      },
+      {
+        "title": "Apply soft limit",
+        "detail": "18 characters per segment"
+      },
+      {
+        "title": "Inspect segments",
+        "detail": "ordered IDs and intact input"
+      }
+    ],
+    "result": "The local segmenter returns three ordered segments and preserves this example’s text."
+  },
+  "integrations": {
+    "title": "Supported input and output routes",
+    "items": [
+      {
+        "title": "Chinese text",
+        "detail": "local sentence splitter"
+      },
+      {
+        "title": "Reference audio",
+        "detail": "recording plus transcript"
+      },
+      {
+        "title": "GGUF artifacts",
+        "detail": "talker and codec paths"
+      },
+      {
+        "title": "FFI / HTTP",
+        "detail": "configured synthesis adapters"
+      },
+      {
+        "title": "FFmpeg / pydub",
+        "detail": "audio rendering helpers"
+      }
+    ]
+  }
+}

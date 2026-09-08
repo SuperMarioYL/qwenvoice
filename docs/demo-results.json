@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "source_revision": "a67bbde096451faa0782b400037280a133167aa0",
+  "scope": "Actual sentence-boundary segmentation of complete Chinese text, no audio generation or model artifacts.",
+  "steps": [
+    {
+      "label": "Recorded run",
+      "body": "Actual sentence-boundary segmentation of complete Chinese text, no audio generation or model artifacts.",
+      "command": ".venv/bin/python examples/presentation_demo.py",
+      "output": "{\n  \"input\": \"缓存保存可复用的结果。数据变化后需要失效。接下来，为每类数据选择有效期。\",\n  \"soft_limit\": 18,\n  \"segments\": [\n    {\n      \"id\": 1,\n      \"text\": \"缓存保存可复用的结果。\"\n    },\n    {\n      \"id\": 2,\n      \"text\": \"数据变化后需要失效。\"\n    },\n    {\n      \"id\": 3,\n      \"text\": \"接下来，为每类数据选择有效期。\"\n    }\n  ]\n}\nInput preserved: True\nScope: sentence-boundary text segmentation only; no voice cloning or audio synthesis."
+    }
+  ]
+}

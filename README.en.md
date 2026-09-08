@@ -1,187 +1,138 @@
-<div align="right"><sub><b>English</b>&nbsp;&nbsp;⇄&nbsp;&nbsp;<a href="./README.md">简体中文</a></sub></div>
+[简体中文](./README.md) · [Website](https://qwenvoice.lei6393.com) · [GitHub](https://github.com/SuperMarioYL/qwenvoice)
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./assets/hero-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="./assets/hero-light.svg">
-    <img src="./assets/hero-light.svg" width="880" alt="QwenVoice — local offline Chinese voice cloning">
-  </picture>
-</p>
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/presentation/hero-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="./assets/presentation/hero-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/presentation/hero-dark.svg">
+  <img src="./assets/presentation/hero-light.svg" width="960" alt="Hero diagram">
+</picture>
 
-<p align="center"><sub>QwenVoice is the local CLI that reads long Chinese text in your own cloned voice — the voice biometric never leaves your machine.</sub></p>
+# QwenVoice
 
-<p align="center">
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license"></a>
-  <a href="https://github.com/SuperMarioYL/qwenvoice/releases"><img src="https://img.shields.io/github/v/release/SuperMarioYL/qwenvoice" alt="latest release"></a>
-  <a href="https://github.com/SuperMarioYL/qwenvoice/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/SuperMarioYL/qwenvoice/ci.yml?label=CI" alt="CI"></a>
-  <img src="https://img.shields.io/badge/python-3.12-blue" alt="python">
-  <img src="https://img.shields.io/badge/runs-offline-success" alt="offline">
-</p>
+**Prepare Chinese narration one segment at a time**
 
-**Give it a 5-second clip of a family member's voice and it reads a whole Chinese essay aloud as segmented MP3 — redraw any single segment without changing the voice.**
+QwenVoice combines a reference-audio record, Chinese sentence segmentation and a single-segment speech command. Its say path uses configured Qwen3-TTS artifacts; long-book and redraw commands are not yet implemented.
 
-<h2><img src="https://api.iconify.design/tabler:topology-star-3.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Architecture</h2>
+## Why use it
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./assets/atlas-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="./assets/atlas-light.svg">
-    <img src="./assets/atlas-light.svg" width="880" alt="architecture: Text+Ref Audio → Segment+VoiceLock → cffi FFI qt3_tts → Seg MP3 + manifest">
-  </picture>
-</p>
+A narration workflow needs to know which text segment, reference recording and model files produced an output. QwenVoice keeps these inputs explicit, while its local segmenter lets you inspect Chinese sentence boundaries before attempting synthesis.
 
-Local GGUF inference for Qwen3-TTS is driven by the third-party [qwentts.cpp](https://github.com/ServeurpersoCom/qwentts.cpp) (packaged by LocalAI as the FFI shared library `libgoqwen3ttscpp`) — the first practical path that runs Chinese voice cloning offline on consumer hardware. QwenVoice wraps it in one command: lock the reference audio + its transcript + the talker/codec GGUF pair, synthesize in-process via cffi FFI (`qt3_load` + `qt3_tts`, no inference subprocess), and let ffmpeg turn the PCM into segmented MP3. The `VoiceLock` plus a per-segment fixed seed is what makes per-segment redraw leave the voice unchanged — a contract neither cloud TTS nor GPT-SoVITS offers.
+- **Inspect segment boundaries** — The segmenter accumulates whole sentences under a soft character limit.
+- **Record reference identity** — VoiceLock hashes reference bytes plus transcript and records model paths.
+- **Separate audio stages** — Synthesis returns PCM; rendering converts audio and writes the output file.
 
-## Why this exists
+## Architecture
 
-Cloud Chinese TTS (Azure, ByteDance Volcano) sounds great, but it requires uploading the voice sample — a biometric that Chinese users broadly refuse to hand over. Long-form text is billed per call, and every redraw changes the voice, so the same passage drifts across segments. ElevenLabs is weak on Chinese, has no offline path, and raises data-export compliance risk. After Qwen3-TTS landed on the llama.cpp / qwentts.cpp path in August 2026, "offline Chinese voice cloning" dropped from "needs a GPU + Python" to "consumer hardware + one command" for the first time. QwenVoice plugs that primitive into a "voice never leaves the machine + per-segment redraw of long Chinese text" layer — a domestic model running locally, with the reference audio staying on disk.
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/presentation/architecture-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="./assets/presentation/architecture-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/presentation/architecture-dark.svg">
+  <img src="./assets/presentation/architecture-light.svg" width="960" alt="Architecture diagram">
+</picture>
 
-### How it compares
+segment.py provides single- and long-text segmentation helpers. VoiceLock validates reference/model paths and fingerprints the reference content. synth_segment tries the qt3_* FFI interface, then a configured HTTP speech endpoint when the FFI is unavailable. render.py handles the returned PCM and MP3 output.
 
-| Axis | QwenVoice | GPT-SoVITS (~40k stars) | Cloud TTS (Azure / Volcano) |
-|---|---|---|---|
-| Local offline inference | ✓ cffi FFI (qwentts.cpp) | ✓ Python + GPU | ✗ needs network |
-| Voice sample uploaded | ✗ never | ✗ local | ✓ required |
-| Runs on consumer hardware | ✓ GGUF Q8 | ✗ needs GPU | ✓ (cloud) |
-| Per-segment redraw, voice locked | ✓ VoiceLock + fixed seed | partial (no in-place contract) | ✗ redraw changes voice |
-| Long Chinese-text segmentation | ✓ jieba boundaries | partial | partial |
-| Model maturity / voice naturalness | partial (Qwen3-TTS early) | ✓ more mature | ✓ best |
+| Component | Responsibility |
+| --- | --- |
+| `Chinese text` | sentence-boundary segments |
+| `VoiceLock` | reference and artifact paths |
+| `Synth adapter` | FFI or HTTP speech |
+| `Audio renderer` | PCM to MP3 |
 
-GPT-SoVITS still leads on model maturity and voice naturalness; QwenVoice differentiates on the "consumer hardware + per-segment redraw without voice drift" layer, not synthesis quality.
+## Install and quickstart
 
-## Contents
-
-- [Install](#install)
-- [Quickstart](#quickstart)
-- [Usage](#usage)
-- [Demo](#demo)
-- [Configuration](#configuration)
-- [Pricing & commercial layer](#pricing--commercial-layer)
-- [Roadmap](#roadmap)
-- [License](#license)
-
-<h2><img src="https://api.iconify.design/tabler:rocket.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Install</h2>
+Python 3.12+ and uv for the text demo. Audio synthesis additionally needs compatible talker/codec GGUF files, an FFI library or configured endpoint, a usable reference sample, and FFmpeg for MP3 rendering.
 
 ```bash
-# Requires Python 3.12 + ffmpeg
-uv tool install qwenvoice          # or: pipx install qwenvoice
+git clone https://github.com/SuperMarioYL/qwenvoice.git
+cd qwenvoice
+uv venv --python 3.12
+source .venv/bin/activate
+uv pip install -e .
 ```
 
-The first run needs the Qwen3-TTS talker + codec GGUF pair (~1.7B quantized weights) and the qwentts.cpp FFI shared library:
+The complete offline example runs segment_long_text on supplied Chinese text and checks that concatenating these segments reconstructs the input. It generates no audio.
 
 ```bash
-scripts/fetch_model.sh             # download talker + codec GGUF to models/
-qwenvoice init                     # probe GGUF / libgoqwen3ttscpp / ffmpeg, write ~/.qwenvoice/config.yml
+.venv/bin/python examples/presentation_demo.py
 ```
 
-<h2><img src="https://api.iconify.design/tabler:rocket.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Quickstart</h2>
+## Recorded demo
 
-Three commands from a cold clone to the first cloned-voice MP3 (synthesis time aside, each step < 60s):
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/presentation/process-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="./assets/presentation/process-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/presentation/process-dark.svg">
+  <img src="./assets/presentation/process-light.svg" width="960" alt="Process diagram">
+</picture>
+
+The local segmenter returns three ordered segments and preserves this example’s text.
+
+```text
+{
+  "input": "缓存保存可复用的结果。数据变化后需要失效。接下来，为每类数据选择有效期。",
+  "soft_limit": 18,
+  "segments": [
+    {
+      "id": 1,
+      "text": "缓存保存可复用的结果。"
+    },
+    {
+      "id": 2,
+      "text": "数据变化后需要失效。"
+    },
+    {
+      "id": 3,
+      "text": "接下来，为每类数据选择有效期。"
+    }
+  ]
+}
+Input preserved: True
+Scope: sentence-boundary text segmentation only; no voice cloning or audio synthesis.
+```
+
+The complete command and output are recorded in [docs/demo-results.json](./docs/demo-results.json). Inputs and reproduction code are included in the repository.
+
+## Usage
+
+Replace artifact and recording paths with real compatible files before running the audio commands. init reports availability and writes ~/.qwenvoice/config.yml; it can write configuration even when artifacts are missing. say locks inputs and synthesizes one segment. Use a voice sample you are authorized to synthesize from.
 
 ```bash
-qwenvoice init                                                      # 1. locate model + FFI lib
-# record a 5–15s clip of a family member as mom.wav, note the transcript
-qwenvoice say --voice mom.wav --ref-text "今天天气真好" \
-  --text "Hello, welcome to QwenVoice." -o hello.mp3                # 2. read one line in that voice
-open hello.mp3                                                      # 3. hear your family member say it
+.venv/bin/qwenvoice init --talker ./models/talker.gguf --codec ./models/codec.gguf --ffi-lib ./libgoqwen3ttscpp.dylib
+.venv/bin/qwenvoice say --voice ./reference.wav --ref-text "参考录音的准确转录" --text "你好，欢迎收听。" --out ./hello.mp3
 ```
 
-<details>
-<summary>Sample output</summary>
+## Configuration
 
-```
-$ qwenvoice init
-artifact           status   path
-talker GGUF        ok       models/qwen-talker-1.7b-base-Q8_0.gguf
-codec/tokenizer    ok       models/qwen-tokenizer-12hz-Q8_0.gguf
-qwentts.cpp FFI    ok       ./libgoqwen3ttscpp.dylib
-ffmpeg             ok       ffmpeg
-wrote /Users/you/.qwenvoice/config.yml
+The YAML config holds talker_gguf, codec_gguf, ffi_lib_path, http_fallback_url, sample_rate, channels, seed and max_chars_per_segment. Configure the HTTP base with init --http-fallback http://127.0.0.1:8000; say has no --http-fallback option. The implementation appends /v1/audio/speech. It does not enforce loopback URLs, so keeping the endpoint local is an operator configuration choice.
 
-$ qwenvoice say --voice mom.wav --ref-text "今天天气真好" --text "Hello, welcome to QwenVoice." -o hello.mp3
-locking voice...
-voice lock: sha256:7c4a8d09ca...
-synthesizing 1 segment (16 chars)...
-synthesizing via qwentts.cpp FFI…
-rendering MP3 → hello.mp3...
-done → hello.mp3
-ref_hash=sha256:7c4a8d09ca... seed=42
-```
-</details>
+## Integrations and responsibilities
 
-<h2><img src="https://api.iconify.design/tabler:terminal-2.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Usage</h2>
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/presentation/integrations-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="./assets/presentation/integrations-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/presentation/integrations-dark.svg">
+  <img src="./assets/presentation/integrations-light.svg" width="960" alt="Integrations diagram">
+</picture>
 
-`qwenvoice` currently implements m1 (`say`, single-segment synthesis). `book` (m2 long-text) and `redraw` (m3 per-segment) are stubs — see the [roadmap](#roadmap).
+The Python package does not include model weights or the FFI library. Its reference hash identifies input changes, not a guarantee of speaker similarity or deterministic audio. A speech endpoint must understand the request’s reference-path and transcript fields.
 
-```bash
-# single-segment synthesis (m1, implemented): lock voice → FFI synth → MP3
-qwenvoice say \
-  --voice mom.wav \
-  --ref-text "今天天气真好" \
-  --text "Hello, welcome to QwenVoice." \
-  -o hello.mp3
+| Route | Implemented role |
+| --- | --- |
+| Chinese text | local sentence splitter |
+| Reference audio | recording plus transcript |
+| GGUF artifacts | talker and codec paths |
+| FFI / HTTP | configured synthesis adapters |
+| FFmpeg / pydub | audio rendering helpers |
 
-# pick a different fixed seed (same lock + same seed → same voice; the redraw contract)
-qwenvoice say --voice mom.wav --ref-text "今天天气真好" --text "Second sentence." --seed 7 -o seg2.mp3
+## Limits and next steps
 
-# override talker/codec GGUF or the FFI lib path (bypass config)
-qwenvoice say --voice mom.wav --ref-text "..." --text "..." \
-  --talker models/qwen-talker-1.7b-base-Q8_0.gguf \
-  --codec  models/qwen-tokenizer-12hz-Q8_0.gguf \
-  --ffi-lib ./libgoqwen3ttscpp.dylib -o out.mp3
+- book and redraw are placeholders that return exit 64. No complete long-book narration or selective redraw workflow is implemented.
+- The soft limit may be exceeded by a single long sentence. The segmenter is punctuation-based; it does not use jieba word boundaries in its current implementation.
+- This demo validates text segmentation only. Native ABI compatibility, voice quality and audio output were not tested.
 
-# fall back to a local vLLM-Omni HTTP server (OpenAI-compatible /v1/audio/speech) when no FFI lib
-qwenvoice say --voice mom.wav --ref-text "..." --text "..." \
-  --http-fallback http://127.0.0.1:8000 -o out.mp3
-```
+Implemented: artifact discovery, reference fingerprinting, single-segment synthesis adapters and text/audio helper modules. Next: compatible-runtime verification, long-book orchestration and redraw with measured audio consistency. No voice-quality or byte-identical redraw promise is established by the current demo.
 
-The reference audio must be ≥ 5 seconds and you must supply its transcript (`--ref-text`) — Qwen3-TTS Base cloning needs both the reference audio and its transcript. If a ≥5s reference still cannot produce a recognizable cloned voice, the m1 kill-criterion gate triggers a halt.
+## License and contributions
 
-<h2><img src="https://api.iconify.design/tabler:photo.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Demo</h2>
-
-![demo](assets/demo.gif)
-
-10-minute happy path: `qwenvoice init` → record `mom.wav` → `qwenvoice say ... -o hello.mp3` → play. The terminal recording is in [`assets/demo.cast`](./assets/demo.cast); the vhs script is in [`docs/demo.tape`](./docs/demo.tape) (rendered to `assets/demo.gif` by `.github/workflows/demo.yml` on the first tag).
-
-<h2><img src="https://api.iconify.design/tabler:adjustments.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Configuration</h2>
-
-`~/.qwenvoice/config.yml` (written by `qwenvoice init`, overridable via CLI flags):
-
-| key | type | default | meaning |
-|---|---|---|---|
-| `talker_gguf` | str | `qwen-talker-1.7b-base-Q8_0.gguf` | path to the Qwen3-TTS talker GGUF |
-| `codec_gguf` | str | `qwen-tokenizer-12hz-Q8_0.gguf` | 12 Hz codec/tokenizer GGUF (auto-discovered sibling `*tokenizer*.gguf`) |
-| `ffi_lib_path` | str | `""` | `libgoqwen3ttscpp-*.so/.dylib` path; empty = auto-detect |
-| `http_fallback_url` | str | `""` | local vLLM-Omni OpenAI-compatible `/v1/audio/speech` fallback URL |
-| `ffmpeg_bin` | str | `ffmpeg` | ffmpeg binary path (wav→mp3 + concatenation) |
-| `sample_rate` | int | `24000` | PCM sample rate (Qwen3-TTS = 24 kHz) |
-| `channels` | int | `1` | channel count (mono) |
-| `seed` | int | `42` | per-segment fixed seed (keeps redraws voice-locked) |
-| `max_chars_per_segment` | int | `200` | soft ceiling for jieba segmentation (never cuts mid-sentence) |
-
-<h2><img src="https://api.iconify.design/tabler:cash.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Pricing & commercial layer</h2>
-
-The paid layer is a **one-click desktop installer + family voice-pack manager GUI** for users who can't install Python / a cffi FFI library (runs locally — not cloud inference; the voice is always processed on-device):
-
-| Tier | Form | Price | Notes |
-|---|---|---|---|
-| CLI + inference engine | open-source CLI (this repo) | free OSS (MIT) | full `say` / `book` / `redraw`, free forever |
-| Desktop installer | one-time-purchase GUI | ¥39–69 / seat | one-click install + voice-pack manager + visual per-segment redraw, for non-technical users |
-| Direct design-partner | WeChat DM | as needed | a whole-book cloned narration in exchange for a `NarrationManifest` sample + feedback |
-
-Payments go through 爱发电 (one-time patron + license key) plus WeChat Pay / Alipay for direct DM; installer .dmg/.exe hosted on GitHub Releases (free). **No per-character billing, no hosted voice** — that would reintroduce the cloud model we're escaping. v0.1 ships only the CLI to hint at this layer; the GUI starts only after the Day-30 user validation passes (≥3/5 target users say they'd use it weekly).
-
-<h2><img src="https://api.iconify.design/tabler:map-2.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Roadmap</h2>
-
-- [x] **m1 voice lock + single-segment synthesis** — `qwenvoice say` runs offline: lock reference audio + transcript + talker/codec GGUF, produce a single cloned-voice MP3 via the qwentts.cpp FFI.
-- [ ] **m2 long-text segmentation + audiobook** — `qwenvoice book`: jieba segmentation, per-segment offline synthesis, write `seg_001..NNN.mp3` + concatenated `full.mp3` + `manifest.json`.
-- [ ] **m3 per-segment redraw** — `qwenvoice redraw`: redraw only the named segment, verify the others stay byte-identical and the voice is locked (the moat demo).
-- [ ] Desktop installer GUI (paid layer, gated on Day-30 validation).
-
-**Kill criteria** (falsifiable, not talk): (1) FFI path broken/abandoned >2 weeks and HTTP fallback also unavailable → halt; (2) m1 gate: a ≥5s reference still cannot clone a recognizable voice → core thesis is false, halt; (3) after 4 weekends + 3 launch events, installs <50 and <3/5 target users say they'd use it weekly → kill; (4) GPT-SoVITS ships a consumer-hardware GGUF one-click GUI first → kill or pivot within 2 quarters.
-
-<h2><img src="https://api.iconify.design/tabler:license.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> License</h2>
-
-[MIT](./LICENSE) © 2026 SuperMarioYL. Issues and PRs welcome: [github.com/SuperMarioYL/qwenvoice/issues](https://github.com/SuperMarioYL/qwenvoice/issues).
-
-<p align="center"><sub><a href="./LICENSE">MIT</a> © 2026 SuperMarioYL</sub></p>
+See [LICENSE](./LICENSE). When reporting an issue, include a minimal input, the command, and the observed output.
