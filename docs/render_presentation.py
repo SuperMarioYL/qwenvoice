@@ -33,9 +33,7 @@ def render(repo):
         and 3 <= len(facts["process"]["steps"]) <= 4
         and 3 <= len(facts["integrations"]["items"]) <= 6
     )
-    assert all(
-        0 <= int(e[0]) < len(nodes) and 0 <= int(e[1]) < len(nodes) for e in edges
-    )
+    assert all(0 <= int(e[0]) < len(nodes) and 0 <= int(e[1]) < len(nodes) for e in edges)
     folder = repo / "assets/presentation"
     web = repo / "web/assets/presentation"
     folder.mkdir(parents=True, exist_ok=True)
@@ -45,7 +43,10 @@ def render(repo):
         p = palette[mode]
 
         def txt(x, y, s, size=20, color="ink", anchor="start", weight=400):
-            return f'<text x="{x}" y="{y}" fill="{p[color]}" font-size="{size}" text-anchor="{anchor}" font-weight="{weight}">{escape(local(s))}</text>'
+            return (
+                f'<text x="{x}" y="{y}" fill="{p[color]}" font-size="{size}" text-anchor="'
+                f'{anchor}" font-weight="{weight}">{escape(local(s))}</text>'
+            )
 
         def para(x, y, s, width, size=18, color="muted", limit=3, anchor="start"):
             rows = textwrap.wrap(local(s), max(8, int(width / (size * 0.57)))) or [""]
@@ -53,23 +54,29 @@ def render(repo):
                 rows = rows[:limit]
                 rows[-1] = rows[-1].rstrip(".") + "…"
             return "".join(
-                txt(x, y + i * size * 1.4, t, size, color, anchor)
-                for i, t in enumerate(rows)
+                txt(x, y + i * size * 1.4, t, size, color, anchor) for i, t in enumerate(rows)
             )
 
         def line(d, active=True):
             return (
-                f'<path d="{d}" fill="none" stroke="{p["primary"] if active else p["line"]}" stroke-width="1.5" marker-end="url(#arrow)"/>'
-                + (
-                    f'<path d="{d}" class="flow" fill="none" stroke="{p["highlight"]}" stroke-width="2"/>'
-                    if active
-                    else ""
+                f'<path d="{d}" fill="none" stroke="'
+                f"{(p['primary'] if active else p['line'])}"
+                '" stroke-width="1.5" marker-end="url(#arrow)"/>'
+            ) + (
+                (
+                    f'''<path d="{d}" class="flow" fill="none" stroke="{p["highlight"]}'''
+                    '" stroke-width="2"/>'
                 )
+                if active
+                else ""
             )
 
         def card(x, y, w, title, detail, h=122):
             return (
-                f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{p["panel"]}" stroke="{p["line"]}"/>'
+                (
+                    f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="'
+                    f'''{p["panel"]}" stroke="{p["line"]}"/>'''
+                )
                 + para(x + 18, y + 31, title, w - 36, 21, "ink", 2)
                 + para(x + 18, y + 83, detail, w - 36, 17, "muted", 2)
             )
@@ -83,15 +90,56 @@ def render(repo):
                 r = math.sqrt(1 - z * z)
                 x = cx + rx * r * math.cos(a)
                 y = cy + ry * z
-                s += f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{rng.uniform(0.6, 1.7):.2f}" fill="{p["primary"] if i % 3 else p["secondary"]}" opacity="{rng.uniform(0.2, 0.8):.2f}"/>'
+                s += (
+                    f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{rng.uniform(0.6, 1.7):.2f}" fill="'
+                    f'''{(p["primary"] if i % 3 else p["secondary"])}" opacity="'''
+                    f'{rng.uniform(0.2, 0.8):.2f}"/>'
+                )
             return s
 
         def save(kind, w, h, title, description, body, mobile=False, static=False):
             slug = f"{kind}{'-mobile' if mobile else ''}-{mode}"
-            css = 'text{font-family:Arial,"Noto Sans",sans-serif}.flow{stroke-dasharray:10 110;animation:flow 6s linear infinite}.pulse{animation:pulse 5s ease-in-out infinite}.turn{transform-box:fill-box;transform-origin:center;animation:turn 36s linear infinite}@keyframes flow{to{stroke-dashoffset:-360}}@keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}@keyframes turn{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transform:none!important}.flow{display:none}}'
+            css = (
+                'text{font-family:Arial,"Noto Sans",sans-se'
+                "rif}.flow{stroke-dasharray:10 110;animatio"
+                "n:flow 6s linear infinite}.pulse{animation"
+                ":pulse 5s ease-in-out infinite}.turn{trans"
+                "form-box:fill-box;transform-origin:center;"
+                "animation:turn 36s linear infinite}@keyfra"
+                "mes flow{to{stroke-dashoffset:-360}}@keyfr"
+                "ames pulse{0%,100%{opacity:.45}50%{opacity"
+                ":1}}@keyframes turn{to{transform:rotate(36"
+                "0deg)}}@media(prefers-reduced-motion:reduc"
+                "e){*{animation:none!important;transform:none!important}.flow{display:none}}"
+            )
             if static:
                 css += "*{animation:none!important;transform:none!important}.flow{display:none}"
-            svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" data-palette="{palette["id"]}" role="img" aria-labelledby="{slug}-title {slug}-desc"><title id="{slug}-title">{escape(title)}</title><desc id="{slug}-desc">{escape(description)}</desc><defs><linearGradient id="brand" gradientUnits="userSpaceOnUse" x2="{w}" y2="{h}"><stop stop-color="{p["primary"]}"/><stop offset=".6" stop-color="{p["secondary"]}"/><stop offset="1" stop-color="{p["highlight"]}"/></linearGradient><radialGradient id="halo"><stop stop-color="{p["primary"]}" stop-opacity=".22"/><stop offset="1" stop-color="{p["bg"]}" stop-opacity="0"/></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="5"/></filter><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="{p["line"]}" stroke-opacity=".35" stroke-width=".6"/></pattern><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="m1 1 7 4-7 4" fill="none" stroke="{p["primary"]}" stroke-width="1.5"/></marker></defs><style>{css}</style><rect width="{w}" height="{h}" rx="16" fill="{p["bg"]}"/><rect width="{w}" height="{h}" rx="16" fill="url(#grid)"/><ellipse cx="{w * 0.63}" cy="{h * 0.43}" rx="{w * 0.5}" ry="{h * 0.7}" fill="url(#halo)"/>{body}</svg>'''
+            svg = (
+                f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}'
+                f'''" viewBox="0 0 {w} {h}" data-palette="{palette["id"]}'''
+                f'" role="img" aria-labelledby="{slug}-title {slug}-desc"><title id="{slug}'
+                f'-title">{escape(title)}</title><desc id="{slug}-desc">{escape(description)}'
+                '</desc><defs><linearGradient id="brand" gradientUnits="userSpaceOnUse" x2="'
+                f'''{w}" y2="{h}"><stop stop-color="{p["primary"]}'''
+                f'''"/><stop offset=".6" stop-color="{p["secondary"]}'''
+                f'''"/><stop offset="1" stop-color="{p["highlight"]}'''
+                '"/></linearGradient><radialGradient id="halo"><stop stop-color="'
+                f'''{p["primary"]}" stop-opacity=".22"/><stop offset="1" stop-color="'''
+                f"""{p["bg"]}" stop-opacity="0"/></radialGradient><filt"""
+                'er id="glow"><feGaussianBlur stdDeviation='
+                '"5"/></filter><pattern id="grid" width="40'
+                '" height="40" patternUnits="userSpaceOnUse'
+                f'''"><path d="M40 0H0V40" fill="none" stroke="{p["line"]}'''
+                '" stroke-opacity=".35" stroke-width=".6"/>'
+                '</pattern><marker id="arrow" viewBox="0 0 '
+                '10 10" refX="8" refY="5" markerWidth="5" m'
+                'arkerHeight="5" orient="auto"><path d="m1 1 7 4-7 4" fill="none" stroke="'
+                f"""{p["primary"]}" stroke-width="1.5"/></marker></defs><style>{css}"""
+                f'''</style><rect width="{w}" height="{h}" rx="16" fill="{p["bg"]}'''
+                f'"/><rect width="{w}" height="{h}" rx="16" fill="url(#grid)"/><ellipse cx="'
+                f'{w * 0.63}" cy="{h * 0.43}" rx="{w * 0.5}" ry="{h * 0.7}" fill="url(#halo)"/>'
+                f"{body}</svg>"
+            )
             out = folder / f"{slug}.svg"
             out.write_text(svg + "\n")
             shutil.copy2(out, web / out.name)
@@ -112,7 +160,10 @@ def render(repo):
                 46 if mobile else 74,
                 (340 if mobile else 580) / max(1, len(name)) / 0.58,
             )
-            b += f'<text x="{28 if mobile else 48}" y="{117 if mobile else 182}" font-size="{size:.1f}" fill="url(#brand)" font-weight="700">{escape(name)}</text>'
+            b += (
+                f'<text x="{(28 if mobile else 48)}" y="{(117 if mobile else 182)}" font-size="'
+                f'{size:.1f}" fill="url(#brand)" font-weight="700">{escape(name)}</text>'
+            )
             b += para(
                 28 if mobile else 50,
                 163 if mobile else 242,
@@ -130,13 +181,15 @@ def render(repo):
             ]
             b += line("M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in pts))
             for x, y in pts:
-                b += f'<circle cx="{x}" cy="{y}" r="12" fill="{p["highlight"]}" opacity=".5" filter="url(#glow)"/><circle class="pulse" cx="{x}" cy="{y}" r="3" fill="{p["highlight"]}"/>'
+                b += (
+                    f'''<circle cx="{x}" cy="{y}" r="12" fill="{p["highlight"]}'''
+                    f'" opacity=".5" filter="url(#glow)"/><circle class="pulse" cx="{x}" cy="'
+                    f'''{y}" r="3" fill="{p["highlight"]}"/>'''
+                )
             save("hero", w, h, name, tagline, b, mobile)
             # Source-backed architecture: different graphs share a readable blueprint.
             h = 150 + len(nodes) * 145 if mobile else 570
-            b = txt(
-                28 if mobile else 44, 44, "ARCHITECTURE / DATA FLOW", 13, "muted"
-            ) + para(
+            b = txt(28 if mobile else 44, 44, "ARCHITECTURE / DATA FLOW", 13, "muted") + para(
                 28 if mobile else 44,
                 84,
                 facts["architecture"]["title"],
@@ -148,10 +201,7 @@ def render(repo):
             coords = (
                 [(28, 130 + i * 145, 344) for i in range(len(nodes))]
                 if mobile
-                else [
-                    (44 + (i % 3) * 316, 142 + (i // 3) * 230, 276)
-                    for i in range(len(nodes))
-                ]
+                else [(44 + (i % 3) * 316, 142 + (i // 3) * 230, 276) for i in range(len(nodes))]
             )
             for k, e in enumerate(edges):
                 a, t = map(int, e[:2])
@@ -174,7 +224,7 @@ def render(repo):
                         lane = sy + 24 + k % 3 * 10
                     d = f"M{ax + aw / 2} {sy}V{lane}H{bx + bw / 2}V{ty}"
                 b += line(d)
-            for n, (x, y, cw) in zip(nodes, coords):
+            for n, (x, y, cw) in zip(nodes, coords, strict=True):
                 b += card(x, y, cw, n["title"], n["detail"])
             save(
                 "architecture",
@@ -188,9 +238,7 @@ def render(repo):
             # Ordered operation, with observed result held in a stable footer.
             steps = facts["process"]["steps"]
             h = 220 + len(steps) * 155 if mobile else 465
-            b = txt(
-                28 if mobile else 44, 44, "PROCESS / FROM INPUT TO RESULT", 13, "muted"
-            ) + para(
+            b = txt(28 if mobile else 44, 44, "PROCESS / FROM INPUT TO RESULT", 13, "muted") + para(
                 28 if mobile else 44,
                 84,
                 facts["process"]["title"],
@@ -205,9 +253,7 @@ def render(repo):
                     if i < len(steps) - 1:
                         b += line(f"M200 {y + 122}V{y + 155}")
                     b += card(28, y, 344, f"{i + 1:02}  " + s["title"], s["detail"])
-                b += para(
-                    28, h - 65, facts["process"]["result"], 344, 18, "highlight", 2
-                )
+                b += para(28, h - 65, facts["process"]["result"], 344, 18, "highlight", 2)
             else:
                 cw = (912 - (len(steps) - 1) * 24) / len(steps)
                 for i, s in enumerate(steps):
@@ -228,9 +274,7 @@ def render(repo):
             # Capability orbits are implemented routes, never a live connection claim.
             items = facts["integrations"]["items"]
             h = 270 + len(items) * 125 if mobile else 600
-            b = txt(
-                28 if mobile else 44, 44, "CAPABILITIES / CONNECTIONS", 13, "muted"
-            ) + para(
+            b = txt(28 if mobile else 44, 44, "CAPABILITIES / CONNECTIONS", 13, "muted") + para(
                 28 if mobile else 44,
                 84,
                 facts["integrations"]["title"],
@@ -241,24 +285,28 @@ def render(repo):
             )
             if mobile:
                 b += (
-                    f'<ellipse cx="200" cy="203" rx="132" ry="53" fill="none" stroke="{p["line"]}"/><circle cx="200" cy="203" r="43" fill="{p["panel"]}" stroke="{p["primary"]}"/>'
-                    + txt(200, 213, name[:2].upper(), 28, "primary", "middle", 700)
-                )
+                    '<ellipse cx="200" cy="203" rx="132" ry="53" fill="none" stroke="'
+                    f'''{p["line"]}"/><circle cx="200" cy="203" r="43" fill="{p["panel"]}'''
+                    f'''" stroke="{p["primary"]}"/>'''
+                ) + txt(200, 213, name[:2].upper(), 28, "primary", "middle", 700)
                 for i, item in enumerate(items):
-                    b += card(
-                        28, 278 + i * 125, 344, item["title"], item["detail"], 112
-                    )
+                    b += card(28, 278 + i * 125, 344, item["title"], item["detail"], 112)
             else:
                 b += (
-                    f'<ellipse cx="500" cy="337" rx="238" ry="176" fill="none" stroke="{p["line"]}"/><ellipse cx="500" cy="337" rx="193" ry="144" fill="none" stroke="{p["line"]}" stroke-dasharray="2 9"/><circle cx="500" cy="337" r="68" fill="{p["panel"]}" stroke="{p["primary"]}"/>'
-                    + txt(500, 348, name[:2].upper(), 34, "primary", "middle", 700)
-                )
+                    '<ellipse cx="500" cy="337" rx="238" ry="176" fill="none" stroke="'
+                    f"""{p["line"]}"/><ellipse cx="500" cy="337" rx="193" ry="""
+                    f'''"144" fill="none" stroke="{p["line"]}'''
+                    '" stroke-dasharray="2 9"/><circle cx="500" cy="337" r="68" fill="'
+                    f'''{p["panel"]}" stroke="{p["primary"]}"/>'''
+                ) + txt(500, 348, name[:2].upper(), 34, "primary", "middle", 700)
                 for i, item in enumerate(items):
                     side = i % 2
                     y = 156 + (i // 2) * 146
                     x = 40 if side == 0 else 724
                     b += line(
-                        f"M{276 if side == 0 else 568} {y + 55 if side == 0 else 337}H{390 if side == 0 else 662}V{337 if side == 0 else y + 55}H{432 if side == 0 else 724}"
+                        f"M{(276 if side == 0 else 568)} {(y + 55 if side == 0 else 337)}H"
+                        f"{(390 if side == 0 else 662)}V{(337 if side == 0 else y + 55)}H"
+                        f"{(432 if side == 0 else 724)}"
                     )
                     b += card(x, y, 236, item["title"], item["detail"], 112)
             save(
