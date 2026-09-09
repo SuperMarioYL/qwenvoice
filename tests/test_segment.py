@@ -90,3 +90,39 @@ class TestSegmentLongText:
     def test_rejects_empty(self) -> None:
         with pytest.raises(ValueError):
             segment_long_text("")
+
+
+class TestConsecutiveTerminators:
+    """v0.2.0 regression — terminator runs (？！！！。。。) must survive intact.
+
+    The v0.1.0 regex matched exactly one terminator per sentence and derived
+    the trailing fragment from the length of the concatenated matches, so runs
+    were skipped and the tail slice landed mid-text (silent character loss and
+    spurious punctuation-only fragments).
+    """
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "怎么会这样？！真的吗。",
+            "太好了！！我们走吧。",
+            "等等。。。你说什么？",
+            "什么？！",
+        ],
+    )
+    def test_no_loss_no_spurious_fragments(self, text: str) -> None:
+        sents = split_sentences(text)
+        # every input character survives, in order — no loss, no reordering
+        assert "".join(sents) == text
+        # no fragment is bare punctuation (the old spurious '。' / '！' tails)
+        for s in sents:
+            assert any(ch not in "。！？!?；;\n…" for ch in s), f"spurious fragment {s!r}"
+
+    def test_terminator_run_stays_with_its_sentence(self) -> None:
+        assert split_sentences("怎么会这样？！真的吗。") == ["怎么会这样？！", "真的吗。"]
+        assert split_sentences("等等。。。你说什么？") == ["等等。。。", "你说什么？"]
+
+    def test_long_text_emits_no_garbage_segments(self) -> None:
+        text = "太好了！！我们出发吧。真的吗？！"
+        segs = segment_long_text(text, max_chars_per_segment=10)
+        assert [s.text for s in segs] == ["太好了！！", "我们出发吧。", "真的吗？！"]

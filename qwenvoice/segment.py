@@ -18,8 +18,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-# CJK + ASCII sentence terminators. We keep the terminator with its sentence.
-_SENT_END = re.compile(r"([^。！？!?；;\n…]+[。！？!?；;\n…])")
+# CJK + ASCII sentence terminators. We keep the terminator run with its
+# sentence — Chinese prose regularly doubles punctuation (？！ ！！ 。。。), and
+# dropping or splitting the run would corrupt the segment text.
+_SENT_END = re.compile(r"([^。！？!?；;\n…]+[。！？!?；;\n…]+)")
 
 # Hard floor/ceiling so a single runaway sentence cannot blow up a segment.
 _MIN_SEGMENT_CHARS = 1
@@ -40,7 +42,7 @@ class TextSegment:
 
 
 def split_sentences(text: str) -> list[str]:
-    """Split Chinese text into sentences on CJK terminators, keeping the mark.
+    """Split Chinese text into sentences on CJK terminator runs, keeping them.
 
     Sentences with no terminator (the tail of the input) are returned as their
     own sentence if non-empty. Pure whitespace is dropped.
@@ -48,13 +50,18 @@ def split_sentences(text: str) -> list[str]:
     cleaned = text.replace("\r\n", "\n").replace("\r", "\n").strip()
     if not cleaned:
         return []
-    parts = _SENT_END.findall(cleaned)
-    # findall with a capturing group returns only the captured chunk; the regex
-    # consumes the whole sentence+terminator, so parts is already the sentences.
-    sentences = [s.strip() for s in parts if s.strip()]
-    # Append the trailing fragment with no terminator (regex requires one).
-    consumed = "".join(parts)
-    tail = cleaned[len(consumed):].strip()
+    sentences: list[str] = []
+    last_end = 0
+    for m in _SENT_END.finditer(cleaned):
+        chunk = m.group(0).strip()
+        if chunk:
+            sentences.append(chunk)
+        last_end = m.end()
+    # Append the trailing fragment with no terminator (the regex requires one).
+    # Deriving the tail from the last match end — not from the length of the
+    # concatenated matches — keeps it correct even if the regex ever skips
+    # characters between matches.
+    tail = cleaned[last_end:].strip()
     if tail:
         sentences.append(tail)
     return sentences
