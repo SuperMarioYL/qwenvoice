@@ -207,8 +207,8 @@
           "zh": "配置"
         },
         "body": {
-          "en": "The YAML config holds talker_gguf, codec_gguf, ffi_lib_path, http_fallback_url, sample_rate, channels, seed and max_chars_per_segment. Configure the HTTP base with init --http-fallback http://127.0.0.1:8000; say has no --http-fallback option. The implementation appends /v1/audio/speech. It does not enforce loopback URLs, so keeping the endpoint local is an operator configuration choice.",
-          "zh": "YAML 配置包含 talker_gguf、codec_gguf、ffi_lib_path、http_fallback_url、sample_rate、channels、seed 和 max_chars_per_segment。HTTP 基础地址通过 init --http-fallback http://127.0.0.1:8000 配置；say 没有 --http-fallback 参数。实现会追加 /v1/audio/speech，且不强制回环 URL，因此端点是否本地由操作员配置决定。"
+          "en": "The YAML config holds talker_gguf, codec_gguf, ffi_lib_path, http_fallback_url, sample_rate, channels, seed and max_chars_per_segment. Configure the HTTP base with init --http-fallback http://127.0.0.1:8000; say has no --http-fallback option. The implementation appends /v1/audio/speech. Since v0.2.0 only loopback and private (LAN/Docker) addresses are accepted; public endpoints are refused so the reference material never leaves the machine.",
+          "zh": "YAML 配置包含 talker_gguf、codec_gguf、ffi_lib_path、http_fallback_url、sample_rate、channels、seed 和 max_chars_per_segment。HTTP 基础地址通过 init --http-fallback http://127.0.0.1:8000 配置；say 没有 --http-fallback 参数。实现会追加 /v1/audio/speech，自 v0.2.0 起仅接受回环与私有（局域网/容器）地址，公网端点会被拒绝，参考资料永不离开本机。"
         }
       },
       {

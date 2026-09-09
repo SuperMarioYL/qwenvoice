@@ -34,12 +34,14 @@ cffi ABI-mode ``dlopen`` infers argument layouts from the call site; the
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import struct
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
 
 from .config import QwenVoiceConfig
 from .voice import VoiceLock
@@ -215,6 +217,38 @@ class FFISynth:
         )
 
 
+def _require_local_endpoint(url: str) -> None:
+    """Refuse non-local speech endpoints (plan out_of_scope: biometric upload — NEVER).
+
+    Allowed: ``localhost`` and loopback/private/link-local IP literals — that
+    covers a vLLM-Omni server on loopback, in a Docker container, or on the
+    LAN. Refused: public addresses and arbitrary hostnames, which would carry
+    the reference transcript and audio path off the machine. Hostnames other
+    than ``localhost`` are not resolved (offline-unreliable); use the server's
+    loopback or private IP instead.
+    """
+    host = urlsplit(url).hostname
+    if not host:
+        raise SynthesisError(
+            "http_fallback_url must include a scheme and host "
+            f"(e.g. http://127.0.0.1:8000), got: {url!r}"
+        )
+    if host == "localhost":
+        return
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        ip = None
+    if ip is not None and (ip.is_loopback or ip.is_private or ip.is_link_local):
+        return
+    raise SynthesisError(
+        f"http_fallback_url host {host!r} is not a local address — the speech "
+        "endpoint must stay on this machine or LAN (loopback/private IP, e.g. "
+        "http://127.0.0.1:8000); a remote endpoint would receive the voice "
+        "reference material"
+    )
+
+
 class HTTPSynth:
     """OpenAI-compatible /v1/audio/speech fallback (local vLLM-Omni server).
 
@@ -229,6 +263,7 @@ class HTTPSynth:
             raise SynthesisError(
                 "no FFI lib and no http_fallback_url configured — cannot synth"
             )
+        _require_local_endpoint(config.http_fallback_url)
         self._lock = lock
         self._config = config
         self._url = config.http_fallback_url.rstrip("/")
