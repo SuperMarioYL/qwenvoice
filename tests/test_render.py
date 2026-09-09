@@ -1,9 +1,9 @@
 """Tests for qwenvoice.render — PCM framing + segment naming.
 
-These tests run without ffmpeg: the wav framing helper and segment-naming are
-pure, and pydub's native wav reader needs no external binary. The mp3 export
-path is exercised only when ffmpeg is on PATH (skipped otherwise) so CI stays
-green on minimal runners.
+The wav framing helper and segment-naming are pure and run everywhere. pydub's
+AudioSegment.from_file shells out to ffprobe (even for an in-memory wav) and
+export shells out to ffmpeg, so those tests are skipped when the binaries are
+missing; CI installs ffmpeg so they run for real there.
 """
 
 from __future__ import annotations
@@ -64,6 +64,10 @@ class TestPcmToAudioSegment:
         raw = struct.pack("<" + "f" * len(floats), *floats)
         return PCM(samples=raw, sample_rate=24000, channels=1)
 
+    # AudioSegment.from_file shells out to ffprobe (mediainfo_json) even for an
+    # in-memory wav — without ffprobe this test crashes, so guard on it (v0.2.0
+    # fix: this guard was missing and CI was red on ffmpeg-less runners).
+    @pytest.mark.skipif(shutil.which("ffprobe") is None, reason="ffprobe not on PATH")
     def test_round_trip_frame_count(self) -> None:
         pcm = self._pcm(256)
         seg = pcm_to_audio_segment(pcm)
@@ -79,7 +83,11 @@ class TestPcmToAudioSegment:
 
 
 class TestRenderSegmentWithText:
-    @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg not on PATH")
+    # export() needs ffmpeg and from_file() needs ffprobe — pydub requires both.
+    @pytest.mark.skipif(
+        shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None,
+        reason="ffmpeg/ffprobe not on PATH",
+    )
     def test_writes_seg_file(self, tmp_path: Path) -> None:
         pcm = PCM(
             samples=struct.pack("<64f", *[i / 64 for i in range(64)]),
