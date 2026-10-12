@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.3.0] - 2026-10-13
+
+### Fixed
+
+- GitHub releases now carry their artifacts. The release workflow built the
+  wheel, sdist and checksums but only stored them as a workflow artifact —
+  nothing was attached to the release, so v0.2.0 shipped with zero assets. The
+  workflow now uploads `dist/*` to the release on every tag push
+  (`.github/workflows/release.yml`).
+- A malformed or invalid `~/.qwenvoice/config.yml` no longer escapes as a raw
+  yaml/pydantic traceback: `say`/`book`/`redraw` exit 2 with a message naming
+  the config path and a fix hint. Render failures (most commonly a missing
+  ffmpeg/ffprobe) exit 4 with an install hint instead of a raw traceback
+  (`qwenvoice/cli.py`).
+- The READMEs no longer claim the HTTP fallback "does not enforce loopback
+  URLs" — that was false since v0.2.0, when `HTTPSynth` started refusing
+  public/remote endpoints. Both READMEs now state the enforced contract
+  (`README.md`, `README.en.md`).
+
+### Added
+
+- The plan's m2/m3 happy path is wired: `qwenvoice book` segments a long
+  Chinese text, synthesizes every segment with the locked voice, writes
+  `seg_NNN.mp3` + concatenated `full.mp3` + `manifest.json`; `qwenvoice
+  redraw` re-synthesizes a single manifest segment with edited text, refuses a
+  re-recorded reference (lock-hash drift) and never rewrites any other
+  segment's file. The orchestration is covered by mock-synth tests; audio
+  output still requires a compatible Qwen3-TTS runtime (`qwenvoice/cli.py`,
+  `tests/test_narration.py`).
+
 ## [0.2.0] - 2026-09-10
 
 ### Fixed
