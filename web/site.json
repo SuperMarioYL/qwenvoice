@@ -10,7 +10,8 @@
   },
   "meta": {
     "visual_style": "neon-particle",
-    "demo_source": "docs/demo-results.json"
+    "demo_source": "docs/demo-results.json",
+    "content_version": "v0.3.0"
   },
   "hero": {
     "headline": {
@@ -18,8 +19,8 @@
       "zh": "逐段准备中文配音"
     },
     "sub": {
-      "en": "QwenVoice combines a reference-audio record, Chinese sentence segmentation and a single-segment speech command. Its say path uses configured Qwen3-TTS artifacts; long-book and redraw commands are not yet implemented.",
-      "zh": "QwenVoice 将参考音频记录、中文句子切分和单段语音命令连接起来。say 路径使用配置的 Qwen3-TTS 产物；长篇 book 与 redraw 命令尚未实现。"
+      "en": "QwenVoice combines a reference-audio record, Chinese sentence segmentation and a single-segment speech command. Its say path uses configured Qwen3-TTS artifacts; book segments a long text and narrates every segment with the locked voice, and redraw rewrites only the target segment — audio output requires a local Qwen3-TTS runtime.",
+      "zh": "QwenVoice 将参考音频记录、中文句子切分和单段语音命令连接起来。say 路径使用配置的 Qwen3-TTS 产物；book 将中文长文分段并逐段合成、拼接 full.mp3 并写 manifest.json，redraw 只重写目标段——语音输出需要本地 Qwen3-TTS 运行时。"
     },
     "href": "#quickstart"
   },
@@ -99,13 +100,20 @@
           "zh": "运行随仓示例"
         },
         "code": ".venv/bin/python examples/presentation_demo.py"
+      },
+      {
+        "title": {
+          "en": "Narrate a long text (needs a local Qwen3-TTS runtime)",
+          "zh": "长文配音（需本地 Qwen3-TTS 运行时）"
+        },
+        "code": ".venv/bin/qwenvoice book --voice ./reference.wav --ref-text \"参考录音的准确转录\" --file ./novel.txt --out ./book\n.venv/bin/qwenvoice redraw ./book --seg 2 --text \"改写后的第二句。\""
       }
     ]
   },
   "limitations": [
     {
-      "en": "book and redraw are placeholders that return exit 64. No complete long-book narration or selective redraw workflow is implemented.",
-      "zh": "book 和 redraw 是返回 64 的占位入口，完整长篇配音与局部重绘流程尚未实现。"
+      "en": "The book/redraw orchestration is implemented end to end; untouched segment files are never rewritten. Audio output requires a compatible Qwen3-TTS runtime (FFI library or local HTTP endpoint); its voice quality and synthesis determinism are not verified without such a runtime.",
+      "zh": "book 与 redraw 的完整编排已实现：未触碰的段文件永不重写。语音输出需要兼容的 Qwen3-TTS 运行时（FFI 库或本地 HTTP 端点），其音质与合成确定性未在无运行时环境下验证。"
     },
     {
       "en": "The soft limit may be exceeded by a single long sentence. The segmenter is punctuation-based; it does not use jieba word boundaries in its current implementation.",
