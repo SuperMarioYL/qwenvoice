@@ -11,7 +11,7 @@
 
 **逐段准备中文配音**
 
-QwenVoice 将参考音频记录、中文句子切分和单段语音命令连接起来。say 路径使用配置的 Qwen3-TTS 产物；长篇 book 与 redraw 命令尚未实现。
+QwenVoice 将参考音频记录、中文句子切分和单段语音命令连接起来。say 路径使用配置的 Qwen3-TTS 产物；book 将中文长文分段、逐段合成并拼接 full.mp3 + manifest.json，redraw 只重写目标段——语音输出需要可用的本地 Qwen3-TTS 运行时。
 
 ## 为什么需要它
 
@@ -95,16 +95,18 @@ Scope: sentence-boundary text segmentation only; no voice cloning or audio synth
 
 ## 用法
 
-运行音频命令前，应将产物和录音路径替换为真实兼容文件。init 报告可用性并写入 ~/.qwenvoice/config.yml；即使产物缺失也可能写配置。say 锁定输入并合成单段。请使用有权用于合成的参考音频。
+运行音频命令前，应将产物和录音路径替换为真实兼容文件。init 报告可用性并写入 ~/.qwenvoice/config.yml；即使产物缺失也可能写配置。say 锁定输入并合成单段；book 分段、逐段合成并拼接完整有声书，redraw 依据 manifest.json 只重画目标段。请使用有权用于合成的参考音频。
 
 ```bash
 .venv/bin/qwenvoice init --talker ./models/talker.gguf --codec ./models/codec.gguf --ffi-lib ./libgoqwen3ttscpp.dylib
 .venv/bin/qwenvoice say --voice ./reference.wav --ref-text "参考录音的准确转录" --text "你好，欢迎收听。" --out ./hello.mp3
+.venv/bin/qwenvoice book --voice ./reference.wav --ref-text "参考录音的准确转录" --file ./novel.txt --out ./book
+.venv/bin/qwenvoice redraw ./book --seg 2 --text "改写后的第二句。"
 ```
 
 ## 配置
 
-YAML 配置包含 talker_gguf、codec_gguf、ffi_lib_path、http_fallback_url、sample_rate、channels、seed 和 max_chars_per_segment。HTTP 基础地址通过 init --http-fallback http://127.0.0.1:8000 配置；say 没有 --http-fallback 参数。实现会追加 /v1/audio/speech，且不强制回环 URL，因此端点是否本地由操作员配置决定。
+YAML 配置包含 talker_gguf、codec_gguf、ffi_lib_path、http_fallback_url、sample_rate、channels、seed 和 max_chars_per_segment。HTTP 基础地址通过 init --http-fallback http://127.0.0.1:8000 配置；say 没有 --http-fallback 参数。实现会追加 /v1/audio/speech，自 v0.2.0 起仅接受回环与私有（局域网/容器）地址，公网端点会被拒绝，参考资料永不离开本机。
 
 ## 集成与职责分工
 
@@ -127,11 +129,11 @@ Python 包不包含模型权重或 FFI 库。参考哈希用于识别输入变�
 
 ## 限制与后续方向
 
-- book 和 redraw 是返回 64 的占位入口，完整长篇配音与局部重绘流程尚未实现。
+- book 与 redraw 的完整编排已实现：分段、逐段合成、拼接与 manifest 状态机；未触碰的段文件永不重写。语音输出需要兼容的 Qwen3-TTS 运行时（FFI 库或本地 HTTP 端点），其音质与合成确定性未在无运行时环境下验证。
 - 单个长句可能超过软上限。当前切分器基于标点，并未使用 jieba 词边界。
 - 本示例仅验证文本切分，未测试原生 ABI 兼容性、音色质量或音频输出。
 
-已实现产物发现、参考指纹、单段合成适配器及文本音频辅助模块。后续是兼容运行时验证、长篇编排和具有实测音频一致性的局部重绘。当前示例不构成音色质量或重绘字节一致的承诺。
+已实现产物发现、参考指纹、单段与长文合成编排及文本音频辅助模块。后续是兼容运行时验证和具有实测音频一致性的局部重绘。当前示例不构成音色质量或重绘字节一致的承诺。
 
 ## 许可与贡献
 

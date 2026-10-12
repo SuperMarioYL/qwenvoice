@@ -11,7 +11,7 @@
 
 **Prepare Chinese narration one segment at a time**
 
-QwenVoice combines a reference-audio record, Chinese sentence segmentation and a single-segment speech command. Its say path uses configured Qwen3-TTS artifacts; long-book and redraw commands are not yet implemented.
+QwenVoice combines a reference-audio record, Chinese sentence segmentation and a single-segment speech command. Its say path uses configured Qwen3-TTS artifacts; book segments a long Chinese text, synthesizes every segment and concatenates full.mp3 + manifest.json, and redraw rewrites only the target segment — audio output requires a working local Qwen3-TTS runtime.
 
 ## Why use it
 
@@ -95,16 +95,18 @@ The complete command and output are recorded in [docs/demo-results.json](./docs/
 
 ## Usage
 
-Replace artifact and recording paths with real compatible files before running the audio commands. init reports availability and writes ~/.qwenvoice/config.yml; it can write configuration even when artifacts are missing. say locks inputs and synthesizes one segment. Use a voice sample you are authorized to synthesize from.
+Replace artifact and recording paths with real compatible files before running the audio commands. init reports availability and writes ~/.qwenvoice/config.yml; it can write configuration even when artifacts are missing. say locks inputs and synthesizes one segment; book segments, synthesizes per segment and concatenates the full narration, and redraw uses manifest.json to rewrite only the target segment. Use a voice sample you are authorized to synthesize from.
 
 ```bash
 .venv/bin/qwenvoice init --talker ./models/talker.gguf --codec ./models/codec.gguf --ffi-lib ./libgoqwen3ttscpp.dylib
 .venv/bin/qwenvoice say --voice ./reference.wav --ref-text "参考录音的准确转录" --text "你好，欢迎收听。" --out ./hello.mp3
+.venv/bin/qwenvoice book --voice ./reference.wav --ref-text "参考录音的准确转录" --file ./novel.txt --out ./book
+.venv/bin/qwenvoice redraw ./book --seg 2 --text "改写后的第二句。"
 ```
 
 ## Configuration
 
-The YAML config holds talker_gguf, codec_gguf, ffi_lib_path, http_fallback_url, sample_rate, channels, seed and max_chars_per_segment. Configure the HTTP base with init --http-fallback http://127.0.0.1:8000; say has no --http-fallback option. The implementation appends /v1/audio/speech. It does not enforce loopback URLs, so keeping the endpoint local is an operator configuration choice.
+The YAML config holds talker_gguf, codec_gguf, ffi_lib_path, http_fallback_url, sample_rate, channels, seed and max_chars_per_segment. Configure the HTTP base with init --http-fallback http://127.0.0.1:8000; say has no --http-fallback option. The implementation appends /v1/audio/speech. Since v0.2.0 it accepts only loopback and private (LAN/Docker) endpoints; public endpoints are refused so the reference material never leaves the machine.
 
 ## Integrations and responsibilities
 
@@ -127,11 +129,11 @@ The Python package does not include model weights or the FFI library. Its refere
 
 ## Limits and next steps
 
-- book and redraw are placeholders that return exit 64. No complete long-book narration or selective redraw workflow is implemented.
+- The full book/redraw orchestration is implemented: segmentation, per-segment synthesis, concatenation and the manifest state machine; untouched segment files are never rewritten. Audio output requires a compatible Qwen3-TTS runtime (FFI library or local HTTP endpoint); its voice quality and synthesis determinism are not verified without such a runtime.
 - The soft limit may be exceeded by a single long sentence. The segmenter is punctuation-based; it does not use jieba word boundaries in its current implementation.
 - This demo validates text segmentation only. Native ABI compatibility, voice quality and audio output were not tested.
 
-Implemented: artifact discovery, reference fingerprinting, single-segment synthesis adapters and text/audio helper modules. Next: compatible-runtime verification, long-book orchestration and redraw with measured audio consistency. No voice-quality or byte-identical redraw promise is established by the current demo.
+Implemented: artifact discovery, reference fingerprinting, single- and long-text synthesis orchestration and text/audio helper modules. Next: compatible-runtime verification and redraw with measured audio consistency. No voice-quality or byte-identical redraw promise is established by the current demo.
 
 ## License and contributions
 
