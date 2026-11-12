@@ -101,7 +101,7 @@ Scope: sentence-boundary text segmentation only; no voice cloning or audio synth
 .venv/bin/qwenvoice init --talker ./models/talker.gguf --codec ./models/codec.gguf --ffi-lib ./libgoqwen3ttscpp.dylib
 .venv/bin/qwenvoice say --voice ./reference.wav --ref-text "参考录音的准确转录" --text "你好，欢迎收听。" --out ./hello.mp3
 .venv/bin/qwenvoice book --voice ./reference.wav --ref-text "参考录音的准确转录" --file ./novel.txt --out ./book
-.venv/bin/qwenvoice redraw ./book --seg 2 --text "改写后的第二句。"
+.venv/bin/qwenvoice redraw --book ./book --seg 2 --text "改写后的第二句。"
 ```
 
 ## 配置
@@ -129,7 +129,7 @@ Python 包不包含模型权重或 FFI 库。参考哈希用于识别输入变�
 
 ## 限制与后续方向
 
-- book 与 redraw 的完整编排已实现：分段、逐段合成、拼接与 manifest 状态机；未触碰的段文件永不重写。语音输出需要兼容的 Qwen3-TTS 运行时（FFI 库或本地 HTTP 端点），其音质与合成确定性未在无运行时环境下验证。
+- book 与 redraw 的完整编排已实现：分段、逐段合成、拼接与 manifest 状态机；redraw 只重写目标段，其余段文件永不改写，并按当前分段重建 full.mp3。语音输出需要兼容的 Qwen3-TTS 运行时（FFI 库或本地 HTTP 端点），其音质与合成确定性未在无运行时环境下验证。
 - 单个长句可能超过软上限。当前切分器基于标点，并未使用 jieba 词边界。
 - 本示例仅验证文本切分，未测试原生 ABI 兼容性、音色质量或音频输出。
 

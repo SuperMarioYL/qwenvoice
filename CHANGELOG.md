@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.4.0] - 2026-11-12
+
+### Fixed
+
+- `redraw` no longer leaves the narration directory describing stale audio. Two
+  defects: the updated `manifest.json` was written through the `output_dir`
+  recorded at `book` time, so a relative `-o book` plus a `redraw` from another
+  directory created a stray `manifest.json` there while the real one kept the
+  old text and `synthesized` status; and `full.mp3` was never rebuilt, so the
+  whole-book MP3 kept the pre-redraw take. The manifest is now written beside
+  the file it was loaded from, and `redraw` re-concatenates `full.mp3` from the
+  manifest's ordered segment files before writing the manifest
+  (`qwenvoice/manifest.py`, `qwenvoice/cli.py`).
+- `say --out <dir>/x.mp3` no longer deletes an existing `<dir>/seg_001.mp3`:
+  `say` rendered straight into the output directory and renamed the file away,
+  silently destroying a segment of a book living in the same directory. It now
+  renders in a private temp dir and moves the result onto `--out`
+  (`qwenvoice/cli.py`).
+- `book` reports a friendly error instead of a traceback for an input file that
+  cannot be read as UTF-8 (a GBK/GB18030 novel) or is not a regular file
+  (`--file` pointing at a directory): exit 2 naming the file with a
+  re-save-as-UTF-8 hint. The config guard gained the same `OSError` /
+  `UnicodeDecodeError` coverage, so an unreadable or non-UTF-8
+  `~/.qwenvoice/config.yml` exits 2 like a malformed one (`qwenvoice/cli.py`).
+
+### Changed
+
+- The documented `redraw` invocation now matches the CLI: both READMEs, the CLI
+  module docstring and the site quickstart use `redraw --book ./book ...`, the
+  form `--help` has always shown. The previous positional example exited with
+  `Missing option '--book'` (`README.md`, `README.en.md`, `qwenvoice/cli.py`,
+  `web/site.json`).
+
+### Quality
+
+- Version-lockstep test now also pins the newest `CHANGELOG.md` heading and
+  `web/site.json` `meta.content_version`, the two surfaces the previous guard
+  missed (`tests/test_version.py`).
+- `examples/presentation_demo.py` imports are sorted, so `ruff check .` is clean
+  from the repo root (CI only lints `qwenvoice tests`, which hid it).
+
 ## [0.3.0] - 2026-10-13
 
 ### Fixed

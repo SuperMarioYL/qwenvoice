@@ -101,7 +101,7 @@ Replace artifact and recording paths with real compatible files before running t
 .venv/bin/qwenvoice init --talker ./models/talker.gguf --codec ./models/codec.gguf --ffi-lib ./libgoqwen3ttscpp.dylib
 .venv/bin/qwenvoice say --voice ./reference.wav --ref-text "参考录音的准确转录" --text "你好，欢迎收听。" --out ./hello.mp3
 .venv/bin/qwenvoice book --voice ./reference.wav --ref-text "参考录音的准确转录" --file ./novel.txt --out ./book
-.venv/bin/qwenvoice redraw ./book --seg 2 --text "改写后的第二句。"
+.venv/bin/qwenvoice redraw --book ./book --seg 2 --text "改写后的第二句。"
 ```
 
 ## Configuration
@@ -129,7 +129,7 @@ The Python package does not include model weights or the FFI library. Its refere
 
 ## Limits and next steps
 
-- The full book/redraw orchestration is implemented: segmentation, per-segment synthesis, concatenation and the manifest state machine; untouched segment files are never rewritten. Audio output requires a compatible Qwen3-TTS runtime (FFI library or local HTTP endpoint); its voice quality and synthesis determinism are not verified without such a runtime.
+- The full book/redraw orchestration is implemented: segmentation, per-segment synthesis, concatenation and the manifest state machine; redraw rewrites only the target segment (every other segment file is left untouched) and rebuilds full.mp3 from the current segments. Audio output requires a compatible Qwen3-TTS runtime (FFI library or local HTTP endpoint); its voice quality and synthesis determinism are not verified without such a runtime.
 - The soft limit may be exceeded by a single long sentence. The segmenter is punctuation-based; it does not use jieba word boundaries in its current implementation.
 - This demo validates text segmentation only. Native ABI compatibility, voice quality and audio output were not tested.
 

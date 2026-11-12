@@ -5,13 +5,16 @@ model runtime is needed. Rendering runs through the real pydub/ffmpeg path —
 CI installs ffmpeg, and locally the tests skip cleanly without it (same guard
 contract as tests/test_render.py). What these tests verify is exactly the new
 layer: orchestration, manifest state transitions, and the redraw guarantee that
-only the target segment file is ever rewritten. They make no claim about voice
-quality or synthesis determinism — that requires a compatible Qwen3-TTS runtime.
+only the target segment file is ever rewritten (v0.4.0: while ``full.mp3`` is
+rebuilt, so the concatenated book follows the manifest). They make no claim
+about voice quality or synthesis determinism — that requires a compatible
+Qwen3-TTS runtime.
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import shutil
 import struct
 from pathlib import Path
@@ -48,6 +51,12 @@ def _pcm_for(text: str) -> PCM:
 
 def _md5(path: Path) -> str:
     return hashlib.md5(path.read_bytes()).hexdigest()  # noqa: S324 — stability check only
+
+
+def _duration_ms(path: Path) -> int:
+    from pydub import AudioSegment
+
+    return len(AudioSegment.from_file(str(path), format="mp3"))
 
 
 def _all_output(result) -> str:
@@ -140,6 +149,33 @@ class TestBook:
         assert "input file not found" in _all_output(result)
 
 
+class TestSay:
+    @needs_render
+    def test_say_into_a_book_dir_keeps_existing_segments(self, narr_env: Path) -> None:
+        # v0.4.0 fix: `say` used to render <out.parent>/seg_001.mp3 and rename it
+        # away, silently deleting the book segment living in that directory.
+        out = narr_env / "book"
+        assert _run_book(narr_env, out).exit_code == 0
+        seg1 = out / "seg_001.mp3"
+        before = _md5(seg1)
+
+        result = runner.invoke(
+            cli.app,
+            [
+                "say",
+                "--voice", str(narr_env / "mom.wav"),
+                "--ref-text", "参考录音的准确转录",
+                "--text", "你好，欢迎收听。",
+                "--out", str(out / "hello.mp3"),
+            ],
+        )
+        assert result.exit_code == 0, _all_output(result)
+        assert seg1.exists(), "say must not consume another project's segment file"
+        assert _md5(seg1) == before
+        assert (out / "hello.mp3").stat().st_size > 0
+        assert not list(out.glob(".tmp*"))
+
+
 class TestRedraw:
     @needs_render
     def test_redraw_rewrites_only_target_segment(self, narr_env: Path) -> None:
@@ -155,7 +191,8 @@ class TestRedraw:
 
         after = {p.name: _md5(p) for p in out.glob("*.mp3")}
         changed = {name for name, digest in after.items() if digest != before.get(name)}
-        assert changed == {"seg_002.mp3"}
+        # the target segment and the derived whole-book MP3 — nothing else
+        assert changed == {"seg_002.mp3", FULL_AUDIO_FILENAME}
 
         manifest = NarrationManifest.load(out)
         target = manifest.get_segment(2)
@@ -164,6 +201,62 @@ class TestRedraw:
         # neighbors keep their original text and status
         assert manifest.get_segment(1).status == "synthesized"
         assert manifest.get_segment(3).status == "synthesized"
+
+    @needs_render
+    def test_redraw_rebuilds_full_audio_from_current_segments(self, narr_env: Path) -> None:
+        out = narr_env / "book"
+        assert _run_book(narr_env, out).exit_code == 0
+
+        before_duration = _duration_ms(out / FULL_AUDIO_FILENAME)
+        result = runner.invoke(
+            cli.app,
+            ["redraw", "--book", str(out), "--seg", "2", "--text", REWRITE],
+        )
+        assert result.exit_code == 0, _all_output(result)
+
+        segment_total = sum(_duration_ms(out / s.filename()) for s in NarrationManifest.load(out).segments)
+        # full.mp3 must follow the redrawn segment instead of keeping the old take
+        assert _duration_ms(out / FULL_AUDIO_FILENAME) == pytest.approx(segment_total, abs=2)
+        assert _duration_ms(out / FULL_AUDIO_FILENAME) != before_duration
+
+    @needs_render
+    def test_redraw_writes_manifest_beside_the_book(
+        self, narr_env: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # A book created with a relative --out records output_dir="book"; a redraw
+        # from another cwd must still update the manifest it read (v0.4.0 fix: it
+        # used to write the update into a stray <cwd>/book/manifest.json).
+        monkeypatch.chdir(narr_env)
+        novel = narr_env / "novel.txt"
+        novel.write_text(NOVEL, encoding="utf-8")
+        result = runner.invoke(
+            cli.app,
+            [
+                "book",
+                "--voice", str(narr_env / "mom.wav"),
+                "--ref-text", "参考录音的准确转录",
+                "--file", str(novel),
+                "--out", "book",
+            ],
+        )
+        assert result.exit_code == 0, _all_output(result)
+        book = narr_env / "book"
+        recorded = json.loads((book / "manifest.json").read_text(encoding="utf-8"))
+        assert recorded["output_dir"] == "book"
+
+        elsewhere = narr_env / "elsewhere"
+        elsewhere.mkdir()
+        monkeypatch.chdir(elsewhere)
+        result = runner.invoke(
+            cli.app,
+            ["redraw", "--book", str(book), "--seg", "2", "--text", REWRITE],
+        )
+        assert result.exit_code == 0, _all_output(result)
+
+        manifest = NarrationManifest.load(book)
+        assert manifest.get_segment(2).text == REWRITE
+        assert manifest.get_segment(2).status == "redrawn"
+        assert not (elsewhere / "book" / "manifest.json").exists()
 
     @needs_render
     def test_redraw_refuses_re_recorded_reference(self, narr_env: Path) -> None:

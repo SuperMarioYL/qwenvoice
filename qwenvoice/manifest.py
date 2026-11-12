@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 from .render import seg_filename
 from .voice import VoiceLock
@@ -67,6 +67,12 @@ class NarrationManifest(BaseModel):
     output_dir: str = ""
     full_audio: str = ""
 
+    # Directory this manifest was actually read from (set by ``load``). The
+    # serialized ``output_dir`` is the string recorded at book time and may be
+    # relative to that run's cwd, so writing through it would drop a redraw's
+    # update wherever the command happens to run instead.
+    _loaded_dir: Path | None = PrivateAttr(default=None)
+
     @classmethod
     def from_lock(
         cls,
@@ -99,10 +105,12 @@ class NarrationManifest(BaseModel):
     # -- persistence --------------------------------------------------------
     @property
     def manifest_path(self) -> Path:
-        return Path(self.output_dir) / MANIFEST_FILENAME
+        """manifest.json beside the directory this manifest was loaded from."""
+        base = self._loaded_dir if self._loaded_dir is not None else Path(self.output_dir)
+        return base / MANIFEST_FILENAME
 
     def write(self) -> Path:
-        """Persist manifest.json into output_dir (created if missing)."""
+        """Persist manifest.json beside the one this manifest describes."""
         p = self.manifest_path
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(
@@ -118,7 +126,9 @@ class NarrationManifest(BaseModel):
         if not p.exists():
             raise FileNotFoundError(f"no manifest.json in {output_dir}")
         data = json.loads(p.read_text(encoding="utf-8"))
-        return cls.model_validate(data)
+        manifest = cls.model_validate(data)
+        manifest._loaded_dir = p.parent
+        return manifest
 
     # -- redraw helpers -----------------------------------------------------
     def get_segment(self, seg_id: int) -> Segment:

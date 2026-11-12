@@ -10,13 +10,14 @@ Examples::
     qwenvoice init
     qwenvoice say --voice mom.wav --ref-text "今天天气真好" --text "你好，欢迎使用 QwenVoice。" -o hello.mp3
     qwenvoice book --voice mom.wav --ref-text "今天天气真好" --file novel.txt -o book/
-    qwenvoice redraw book/ --seg 2 --text "改写后的第二句。"
+    qwenvoice redraw --book book/ --seg 2 --text "改写后的第二句。"
 """
 
 from __future__ import annotations
 
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import typer
@@ -69,12 +70,13 @@ def _root(
 def _load_config_or_exit() -> QwenVoiceConfig:
     """Load ~/.qwenvoice/config.yml, exiting friendly if it is malformed.
 
-    A hand-edited or truncated config.yml must not escape as a raw
-    yaml/pydantic traceback (v0.3.0 fix: both used to, exit code 1).
+    A hand-edited, truncated, non-UTF-8 or unreadable config.yml must not escape
+    as a raw yaml/pydantic/OS traceback (v0.3.0 fixed the first two, v0.4.0 the
+    last two; all used to exit 1 with a traceback).
     """
     try:
         return QwenVoiceConfig.load(DEFAULT_CONFIG_PATH)
-    except (yaml.YAMLError, ValidationError) as exc:
+    except (yaml.YAMLError, ValidationError, OSError, UnicodeDecodeError) as exc:
         err_console.print(f"[red]config error:[/red] {DEFAULT_CONFIG_PATH}: {exc}")
         err_console.print(
             "[dim]hint: fix or delete the file, then re-run `qwenvoice init`.[/dim]"
@@ -270,18 +272,17 @@ def say(
             _synthesis_error(exc)
 
     console.print(f"[cyan]rendering MP3 → {out}...[/cyan]")
+    desired = Path(out)
     try:
-        # render_segment_with_text writes seg_NNN.mp3 into out.parent; for `say`
-        # we honor the explicit --out name by renaming if they differ.
-        rendered = render_segment_with_text(pcm, seg.id, seg.text, out.parent)
+        # Render into a private temp dir, then move onto --out. Rendering
+        # straight into out.parent would write — and then rename away — a
+        # seg_001.mp3 belonging to a book in the same directory (v0.4.0 fix).
+        desired.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=desired.parent) as tmp_dir:
+            rendered = render_segment_with_text(pcm, seg.id, seg.text, tmp_dir)
+            final = Path(rendered.audio_path).replace(desired)
     except Exception as exc:
         _render_error(exc)
-    final = Path(rendered.audio_path)
-    desired = Path(out)
-    if desired != final:
-        desired.parent.mkdir(parents=True, exist_ok=True)
-        final.rename(desired)
-        final = desired
     console.print(f"[green]done[/green] → {final}")
     console.print(f"[dim]ref_hash={lock.ref_hash} seed={seed}[/dim]")
 
@@ -307,7 +308,18 @@ def book(
     if not file.exists():
         err_console.print(f"[red]input file not found:[/red] {file}")
         raise typer.Exit(code=2) from None
-    text = file.read_text(encoding="utf-8")
+    try:
+        text = file.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        # A GBK/GB18030 novel is the obvious real-world case for this product.
+        err_console.print(
+            f"[red]cannot read input file:[/red] {file} is not UTF-8 ({exc}); "
+            "re-save the text as UTF-8 and retry."
+        )
+        raise typer.Exit(code=2) from None
+    except OSError as exc:
+        err_console.print(f"[red]cannot read input file:[/red] {file}: {exc}")
+        raise typer.Exit(code=2) from None
 
     console.print("[cyan]locking voice...[/cyan]")
     try:
@@ -435,6 +447,15 @@ def redraw(
     except Exception as exc:
         _render_error(exc)
     manifest.mark_redrawn(seg, text)
+    # full.mp3 is the deliverable, so it has to follow the manifest: leaving it
+    # holding the previous take would ship stale narration (v0.4.0 fix).
+    try:
+        concatenate_segments(
+            [Path(book_dir) / s.filename() for s in manifest.segments],
+            Path(book_dir) / FULL_AUDIO_FILENAME,
+        )
+    except Exception as exc:
+        _render_error(exc)
     manifest.write()
     console.print(
         f"[green]done[/green] → {rendered.audio_path} "

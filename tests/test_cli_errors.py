@@ -67,6 +67,81 @@ class TestConfigErrorSurface:
         assert "config error" not in _all_output(result)
         assert "voice lock failed" in _all_output(result)
 
+    def test_unreadable_config_exits_friendly(self, config_path: Path) -> None:
+        # v0.4.0: a config path that cannot be read (here: a directory) used to
+        # escape as a raw IsADirectoryError traceback, exit 1.
+        config_path.mkdir()
+        result = runner.invoke(
+            cli.app,
+            ["say", "--voice", "x.wav", "--ref-text", "r", "--text", "t"],
+        )
+        assert result.exit_code == 2
+        out = _all_output(result)
+        assert "Traceback" not in out
+        assert "config error" in out
+
+    def test_non_utf8_config_exits_friendly(self, config_path: Path) -> None:
+        config_path.write_bytes(b"talker_gguf: \xd5\xe2\xca\xc7\n")  # GB18030 bytes
+        result = runner.invoke(
+            cli.app,
+            ["say", "--voice", "x.wav", "--ref-text", "r", "--text", "t"],
+        )
+        assert result.exit_code == 2
+        out = _all_output(result)
+        assert "Traceback" not in out
+        assert "config error" in out
+
+
+class TestInputFileErrorSurface:
+    """``book --file`` must not escape as a traceback (v0.4.0).
+
+    A GBK/GB18030 novel and a path that is not a regular file are the two
+    input shapes a Chinese long-text narration user actually hits.
+    """
+
+    def _book(self, tmp_path: Path, novel: Path, config_path: Path):
+        (tmp_path / "mom.wav").write_bytes(b"RIFFfake" * 64)
+        (tmp_path / "talker.gguf").write_bytes(b"fake-gguf")
+        (tmp_path / "codec.gguf").write_bytes(b"fake-gguf")
+        config_path.write_text(
+            f"talker_gguf: {tmp_path / 'talker.gguf'}\n"
+            f"codec_gguf: {tmp_path / 'codec.gguf'}\n",
+            encoding="utf-8",
+        )
+        return runner.invoke(
+            cli.app,
+            [
+                "book",
+                "--voice", str(tmp_path / "mom.wav"),
+                "--ref-text", "参考",
+                "--file", str(novel),
+                "--out", str(tmp_path / "book"),
+            ],
+        )
+
+    def test_non_utf8_text_file_exits_friendly(
+        self, tmp_path: Path, config_path: Path
+    ) -> None:
+        novel = tmp_path / "gbk_novel.txt"
+        novel.write_bytes("这是第一句话。这是第二句话。".encode("gb18030"))
+        result = self._book(tmp_path, novel, config_path)
+        assert result.exit_code == 2
+        out = _all_output(result)
+        assert "Traceback" not in out
+        assert "cannot read input file" in out
+        assert "UTF-8" in out
+
+    def test_directory_as_text_file_exits_friendly(
+        self, tmp_path: Path, config_path: Path
+    ) -> None:
+        directory = tmp_path / "novel_dir"
+        directory.mkdir()
+        result = self._book(tmp_path, directory, config_path)
+        assert result.exit_code == 2
+        out = _all_output(result)
+        assert "Traceback" not in out
+        assert "cannot read input file" in out
+
 
 class TestRenderErrorSurface:
     def test_render_failure_exits_friendly_with_hint(
